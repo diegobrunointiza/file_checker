@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Auditor Experto de Archivos v4.20</title>
+    <title>File Checker</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jschardet/3.0.0/jschardet.min.js"></script>
@@ -13,10 +13,15 @@
         h1 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-bottom: 20px; }
         
         .upload-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; margin-bottom: 20px; }
-        .upload-box { border: 2px dashed #bdc3c7; padding: 20px; text-align: center; border-radius: 8px; background-color: #f8f9fa; position: relative; transition: all 0.3s; }
+        .upload-box { border: 2px dashed #bdc3c7; padding: 20px; text-align: center; border-radius: 8px; background-color: #f8f9fa; transition: all 0.3s; }
         .upload-box.required { border-color: #3498db; background-color: #ebf5fb; }
-        .upload-box h3 { font-size: 16px; margin-top: 0; color: #2c3e50; }
-        .upload-box input[type="file"] { position: absolute; width: 100%; height: 100%; top: 0; left: 0; opacity: 0; cursor: pointer; }
+        
+        /* Nueva estructura de botones fijos */
+        .upload-label { display: block; cursor: pointer; padding-bottom: 5px; }
+        .upload-label h3 { font-size: 16px; margin-top: 0; color: #2c3e50; transition: color 0.3s; }
+        .upload-label:hover h3 { color: #3498db; }
+        .upload-box input[type="file"] { display: none; } /* Ahora el input está oculto, usamos el label */
+        
         .file-name { display: block; margin-top: 10px; font-weight: bold; font-size: 14px; color: #16a085; min-height: 20px; }
         
         .sheet-selector { display: none; width: 100%; margin-top: 15px; padding: 10px; border-radius: 5px; border: 1px solid #3498db; background-color: #fff; font-family: inherit; font-size: 14px; color: #2c3e50; cursor: pointer; font-weight: bold; }
@@ -31,7 +36,7 @@
         .config-item.danger { color: #c0392b; }
         
         .upload-box.disabled-box { border-color: #d5dbdb; background-color: #eaeded; opacity: 0.7; cursor: not-allowed; }
-        .upload-box.disabled-box input[type="file"] { cursor: not-allowed; pointer-events: none; }
+        .upload-box.disabled-box .upload-label { cursor: not-allowed; }
         .upload-box.disabled-box h3, .upload-box.disabled-box p { color: #95a5a6; }
         .construction-badge { background-color: #f39c12; color: white; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; display: inline-block; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
 
@@ -63,26 +68,33 @@
     
     <div class="upload-grid">
         <div class="upload-box required" id="boxClient">
-            <h3>1. Archivo del Cliente (Requerido)</h3>
-            <p>Datos a importar.</p>
+            <label for="clientFile" class="upload-label">
+                <h3>1. Archivo del Cliente (Requerido)</h3>
+                <p>Datos a importar.</p>
+                <span class="file-name" id="nameClient">Ningún archivo seleccionado</span>
+            </label>
             <input type="file" id="clientFile" accept=".xlsx, .xls, .csv, .txt">
-            <span class="file-name" id="nameClient">Ningún archivo seleccionado</span>
+            
             <select id="clientSheetSelector" class="sheet-selector"></select>
         </div>
         
         <div class="upload-box" id="boxTemplate">
-            <h3>2. Plantilla Intiza (Opcional)</h3>
-            <p>Para comparar columnas.</p>
+            <label for="templateFile" class="upload-label">
+                <h3>2. Plantilla Intiza (Opcional)</h3>
+                <p>Para comparar columnas.</p>
+                <span class="file-name" id="nameTemplate">Ningún archivo seleccionado</span>
+            </label>
             <input type="file" id="templateFile" accept=".xlsx, .xls, .csv, .txt">
-            <span class="file-name" id="nameTemplate">Ningún archivo seleccionado</span>
         </div>
         
         <div class="upload-box disabled-box" id="boxErrors">
-            <span class="construction-badge">🚧 En construcción 🚧</span>
-            <h3>3. Fallas Intiza</h3>
-            <p>Reporte de errores devuelto.</p>
+            <label for="errorsFile" class="upload-label" style="cursor: not-allowed;">
+                <span class="construction-badge">🚧 En construcción 🚧</span>
+                <h3>3. Fallas Intiza</h3>
+                <p>Reporte de errores devuelto.</p>
+                <span class="file-name" id="nameErrors" style="color: #95a5a6;">Módulo inhabilitado</span>
+            </label>
             <input type="file" id="errorsFile" accept=".xlsx, .xls, .csv, .txt" disabled>
-            <span class="file-name" id="nameErrors" style="color: #95a5a6;">Módulo inhabilitado</span>
         </div>
     </div>
 
@@ -590,19 +602,17 @@
     }
 
     function validarDatosLimpios(data, issues, info, config) {
-        // Expresiones matemáticas protegidas contra falsos positivos numéricos
         const regexISO = /^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})(?:\s|$|T)/; 
         const regexEndYear = /^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4}|\d{2})(?:\s|$|T)/; 
         const regexAlphaMonth = /^(\d{1,2})[\/\-\.\s]([a-zA-Z]{3,9})[\/\-\.\s](\d{4}|\d{2})(?:\s|$|T)/; 
         const regexCompact = /^(19|20)\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])$/; 
-        const regexNoYear = /^(\d{1,2})[\/\-](\d{1,2})$/; // Retirado el punto para evitar detectar 80.00 como fecha
+        const regexNoYear = /^(\d{1,2})[\/\-](\d{1,2})$/; 
 
         const formatosPorColumna = {}; 
         let filasVacias = 0;
         
         const headers = data[0] || [];
         
-        // Decodificamos el array de columnas objetivo si seleccionó CUSTOM
         let targetDateCols = null; 
         if (config.fechas) {
             if (config.fechasModo === 'CUSTOM') {
@@ -648,7 +658,6 @@
                             let m = evalString.match(regexEndYear);
                             if (m) {
                                 const p1 = parseInt(m[1], 10), p2 = parseInt(m[2], 10);
-                                // Validación matemática estricta para días y meses
                                 if (p1 > 0 && p1 <= 31 && p2 > 0 && p2 <= 31) {
                                     if (p1 > 12 && p2 <= 12) formato = 'Texto: DD/MM/AAAA';
                                     else if (p1 <= 12 && p2 > 12) formato = 'Texto: MM/DD/AAAA';
@@ -658,7 +667,6 @@
                                 m = evalString.match(regexNoYear);
                                 if (m) {
                                     const p1 = parseInt(m[1], 10), p2 = parseInt(m[2], 10);
-                                    // Validación matemática estricta para días y meses sin año
                                     if (p1 > 0 && p1 <= 31 && p2 > 0 && p2 <= 31) {
                                         if (p1 > 12 && p2 <= 12) formato = 'Texto: DD/MM';
                                         else if (p1 <= 12 && p2 > 12) formato = 'Texto: MM/DD';
@@ -762,7 +770,6 @@
                 return order[a.type] - order[b.type];
             });
 
-            // Si Exhaustivo está activo no hay límite (o límite muy alto), de lo contrario 10,000 max.
             const max = cfg.exhaustivo ? issues.length : 10000;
             if (issues.length > max) html += `<p><i>Mostrando los primeros ${max} hallazgos...</i></p>`;
 
