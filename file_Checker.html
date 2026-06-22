@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Auditor Experto de Archivos v4.16</title>
+    <title>Auditor Experto de Archivos v4.20</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jschardet/3.0.0/jschardet.min.js"></script>
@@ -20,6 +20,15 @@
         .file-name { display: block; margin-top: 10px; font-weight: bold; font-size: 14px; color: #16a085; min-height: 20px; }
         
         .sheet-selector { display: none; width: 100%; margin-top: 15px; padding: 10px; border-radius: 5px; border: 1px solid #3498db; background-color: #fff; font-family: inherit; font-size: 14px; color: #2c3e50; cursor: pointer; font-weight: bold; }
+        
+        /* Panel de Configuración */
+        .config-panel { background: #fdfefe; border: 1px solid #d5dbdb; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .config-panel h3 { margin-top: 0; color: #2c3e50; font-size: 16px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .config-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; }
+        .config-item { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #34495e; font-weight: 600; cursor: pointer; }
+        .config-item input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; accent-color: #3498db; }
+        .config-item.danger input[type="checkbox"] { accent-color: #e74c3c; }
+        .config-item.danger { color: #c0392b; }
         
         .upload-box.disabled-box { border-color: #d5dbdb; background-color: #eaeded; opacity: 0.7; cursor: not-allowed; }
         .upload-box.disabled-box input[type="file"] { cursor: not-allowed; pointer-events: none; }
@@ -77,6 +86,41 @@
         </div>
     </div>
 
+    <div class="config-panel">
+        <h3>⚙️ Opciones de Auditoría</h3>
+        <div class="config-grid">
+            <label class="config-item" title="Verifica espacios invisibles, comillas sin cerrar y filas vacías">
+                <input type="checkbox" id="chkEstructura" checked> Espacios, comillas y filas vacías
+            </label>
+            <label class="config-item" title="Escanea el Excel buscando cálculos o macros ocultas">
+                <input type="checkbox" id="chkFormulas" checked> Buscar Fórmulas (Solo Excel)
+            </label>
+            <label class="config-item" title="Revisa si el libro de Excel tiene pestañas escondidas">
+                <input type="checkbox" id="chkHojasOcultas" checked> Detectar Hojas Ocultas (Excel)
+            </label>
+            <label class="config-item danger" title="Analiza el 100% de las filas para deducir tipos de datos. Puede ser lento en archivos pesados.">
+                <input type="checkbox" id="chkExhaustivo"> Análisis Exhaustivo (Sin Límite)
+            </label>
+            
+            <div style="grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; margin-top: 5px; border-top: 1px dashed #ddd; padding-top: 15px; flex-wrap: wrap;">
+                <label class="config-item">
+                    <input type="checkbox" id="chkFechas" checked> 📅 Analizar Fechas en:
+                </label>
+                <select id="selFechasModo" class="sheet-selector" style="display: inline-block; width: auto; margin-top: 0; padding: 5px;">
+                    <option value="ALL">Todas las columnas</option>
+                    <option value="CUSTOM">Múltiples letras (Ej: A, C, D)</option>
+                </select>
+                <input type="text" id="txtFechasCols" placeholder="Ej: A, C, AA" style="display: none; padding: 5px; border-radius: 4px; border: 1px solid #3498db; width: 140px; font-weight: bold; color: #2c3e50;">
+                
+                <span style="width: 20px;"></span><label class="config-item">
+                    <input type="checkbox" id="chkDuplicates"> 🔍 Duplicados en:
+                </label>
+                <select id="colDuplicateSelector" class="sheet-selector" style="display: none; margin-top: 0; width: auto; padding: 5px;"></select>
+                <span id="dupWarning" style="display:none; color:#e74c3c; font-size:12px; font-weight:bold;">¡Sube un archivo primero!</span>
+            </div>
+        </div>
+    </div>
+
     <button id="btnProcess" class="btn-process" disabled>Analizar Archivos</button>
 
     <div id="dashboardContainer"></div>
@@ -92,6 +136,19 @@
     };
     const btnProcess = document.getElementById('btnProcess');
     const clientSheetSelector = document.getElementById('clientSheetSelector');
+    
+    // Controles de Configuración
+    const chkEstructura = document.getElementById('chkEstructura');
+    const chkFormulas = document.getElementById('chkFormulas');
+    const chkHojasOcultas = document.getElementById('chkHojasOcultas');
+    const chkExhaustivo = document.getElementById('chkExhaustivo');
+    
+    const chkFechas = document.getElementById('chkFechas');
+    const selFechasModo = document.getElementById('selFechasModo');
+    const txtFechasCols = document.getElementById('txtFechasCols');
+
+    const chkDuplicates = document.getElementById('chkDuplicates');
+    const colDuplicateSelector = document.getElementById('colDuplicateSelector');
 
     function getColumnLetter(colIndex) {
         let letter = '';
@@ -103,6 +160,53 @@
         return letter;
     }
 
+    function populateSelectors(headers) {
+        colDuplicateSelector.innerHTML = '';
+        
+        // Limpiamos las opciones dinámicas de Fechas, dejando solo 'ALL' y 'CUSTOM'
+        Array.from(selFechasModo.options).forEach(opt => {
+            if (opt.value !== 'ALL' && opt.value !== 'CUSTOM') opt.remove();
+        });
+
+        headers.forEach((h, idx) => {
+            const letter = getColumnLetter(idx);
+            const safeName = h ? h : `Sin nombre`;
+            
+            // Llenar selector de Duplicados
+            const optD = document.createElement('option');
+            optD.value = idx;
+            optD.textContent = `${letter} - ${safeName}`;
+            colDuplicateSelector.appendChild(optD);
+
+            // Llenar selector de Fechas
+            const optF = document.createElement('option');
+            optF.value = idx;
+            optF.textContent = `Solo ${letter} (${safeName})`;
+            selFechasModo.appendChild(optF);
+        });
+    }
+
+    // Interacciones UI - Fechas
+    chkFechas.addEventListener('change', (e) => {
+        selFechasModo.disabled = !e.target.checked;
+        txtFechasCols.disabled = !e.target.checked;
+    });
+
+    selFechasModo.addEventListener('change', (e) => {
+        txtFechasCols.style.display = e.target.value === 'CUSTOM' ? 'inline-block' : 'none';
+    });
+
+    // Interacciones UI - Duplicados
+    chkDuplicates.addEventListener('change', (e) => {
+        if (!inputs.client.files[0]) {
+            document.getElementById('dupWarning').style.display = 'inline';
+            e.target.checked = false;
+            return;
+        }
+        document.getElementById('dupWarning').style.display = 'none';
+        colDuplicateSelector.style.display = e.target.checked ? 'inline-block' : 'none';
+    });
+
     inputs.client.addEventListener('change', (e) => {
         const file = e.target.files[0];
         const nameSpan = document.getElementById('nameClient');
@@ -110,18 +214,21 @@
         
         clientSheetSelector.style.display = 'none';
         clientSheetSelector.innerHTML = '';
+        document.getElementById('dupWarning').style.display = 'none';
         
         const hasClientFile = inputs.client.files && inputs.client.files.length > 0;
         btnProcess.disabled = !hasClientFile;
 
         if (file) {
             const ext = file.name.split('.').pop().toLowerCase();
+            
             if (ext === 'xlsx' || ext === 'xls') {
                 const reader = new FileReader();
                 reader.onload = (ev) => {
                     try {
                         const data = new Uint8Array(ev.target.result);
-                        const workbook = XLSX.read(data, {type: 'array', bookSheets: true});
+                        const workbook = XLSX.read(data, {type: 'array'}); 
+                        
                         if (workbook.SheetNames && workbook.SheetNames.length > 1) {
                             workbook.SheetNames.forEach(sheetName => {
                                 const option = document.createElement('option');
@@ -130,16 +237,43 @@
                                 clientSheetSelector.appendChild(option);
                             });
                             clientSheetSelector.style.display = 'block';
-                            clientSheetSelector.style.position = 'relative';
-                            clientSheetSelector.style.zIndex = '10';
                         }
-                    } catch (err) {
-                        console.error("Error pre-leyendo hojas:", err);
-                    }
+                        
+                        window.loadHeadersForSheet = function(sheetName) {
+                            const ws = workbook.Sheets[sheetName];
+                            const json = XLSX.utils.sheet_to_json(ws, {header: 1, range: 0});
+                            populateSelectors(json[0] || []);
+                        };
+                        window.loadHeadersForSheet(workbook.SheetNames[0]);
+
+                    } catch (err) { console.error("Error pre-leyendo hojas:", err); }
                 };
                 reader.readAsArrayBuffer(file);
+            } else {
+                const textReader = new FileReader();
+                textReader.onload = (ev) => {
+                    Papa.parse(ev.target.result, {
+                        preview: 1,
+                        complete: function(results) {
+                            if (results.data && results.data.length > 0) populateSelectors(results.data[0]);
+                        }
+                    });
+                };
+                textReader.readAsText(file);
             }
+        } else {
+            chkDuplicates.checked = false;
+            colDuplicateSelector.style.display = 'none';
+            colDuplicateSelector.innerHTML = '';
+            
+            Array.from(selFechasModo.options).forEach(opt => {
+                if (opt.value !== 'ALL' && opt.value !== 'CUSTOM') opt.remove();
+            });
         }
+    });
+
+    clientSheetSelector.addEventListener('change', (e) => {
+        if (window.loadHeadersForSheet) window.loadHeadersForSheet(e.target.value);
     });
 
     ['template', 'errors'].forEach(key => {
@@ -150,28 +284,51 @@
         });
     });
 
-    clientSheetSelector.addEventListener('click', (e) => e.stopPropagation());
-    clientSheetSelector.addEventListener('mousedown', (e) => e.stopPropagation());
+    // Función para transformar el texto "A, B, AA" en un array numérico [0, 1, 26]
+    function parseTargetCols(str) {
+        if (!str) return [];
+        return str.toUpperCase().split(',').map(s => s.trim()).filter(s => s).map(s => {
+            let col = 0;
+            for(let i = 0; i < s.length; i++) {
+                col = col * 26 + (s.charCodeAt(i) - 64);
+            }
+            return col - 1;
+        });
+    }
 
     btnProcess.addEventListener('click', async () => {
         const resultsDiv = document.getElementById('results');
-        resultsDiv.innerHTML = '<p>Procesando datos de forma segura en tu navegador...</p>';
+        resultsDiv.innerHTML = '<p>Ejecutando motores de auditoría seleccionados...</p>';
         document.getElementById('dashboardContainer').innerHTML = '';
         document.getElementById('intizaErrorsContainer').innerHTML = '';
         btnProcess.disabled = true;
+
+        const auditorConfig = {
+            estructura: chkEstructura.checked,
+            formulas: chkFormulas.checked,
+            hojasOcultas: chkHojasOcultas.checked,
+            exhaustivo: chkExhaustivo.checked,
+            duplicados: {
+                check: chkDuplicates.checked,
+                colIndex: chkDuplicates.checked ? parseInt(colDuplicateSelector.value) : null
+            },
+            fechas: chkFechas.checked,
+            fechasModo: selFechasModo.value,
+            fechasColsTxt: txtFechasCols.value
+        };
 
         try {
             const selectedClientSheet = clientSheetSelector.style.display === 'block' ? clientSheetSelector.value : null;
 
             const [clientResult, templateResult, errorsResult] = await Promise.all([
-                readAndParseFile(inputs.client.files[0], selectedClientSheet),
-                readAndParseFile(inputs.template.files[0], null),
-                readAndParseFile(inputs.errors.files[0], null)
+                readAndParseFile(inputs.client.files[0], selectedClientSheet, auditorConfig),
+                readAndParseFile(inputs.template.files[0], null, auditorConfig),
+                readAndParseFile(inputs.errors.files[0], null, auditorConfig)
             ]);
 
             if (!clientResult) throw new Error("El archivo del cliente no pudo ser leído.");
 
-            ejecutarAuditoria({ client: clientResult, template: templateResult, errors: errorsResult });
+            ejecutarAuditoria({ client: clientResult, template: templateResult, errors: errorsResult }, auditorConfig);
 
         } catch (error) {
             resultsDiv.innerHTML = `<div class="issue-card"><b>Error crítico:</b> ${error.message}</div>`;
@@ -180,12 +337,12 @@
         }
     });
 
-    function readAndParseFile(file, targetSheetName = null) {
+    function readAndParseFile(file, targetSheetName = null, config) {
         return new Promise((resolve, reject) => {
             if (!file) return resolve(null);
             
             const ext = file.name.split('.').pop().toLowerCase();
-            const info = { type: ext.toUpperCase(), name: file.name, encoding: 'N/A', esTexto: false, hojasOcultas: 0 };
+            const info = { type: ext.toUpperCase(), name: file.name, encoding: 'N/A', esTexto: false, hojasOcultas: 0, config: config };
             const isExcel = ext === 'xlsx' || ext === 'xls';
 
             if (isExcel) {
@@ -194,24 +351,23 @@
                 reader.onload = (e) => {
                     try {
                         const data = new Uint8Array(e.target.result);
-                        const workbook = XLSX.read(data, {type: 'array', cellDates: true, cellFormula: true});
+                        const readConfig = { type: 'array', cellDates: true, cellFormula: config.formulas };
+                        const workbook = XLSX.read(data, readConfig);
                         
-                        let ocultas = 0;
-                        if (workbook.Workbook && workbook.Workbook.Sheets) {
-                            workbook.Workbook.Sheets.forEach(sheet => {
-                                if (sheet.Hidden === 1 || sheet.Hidden === 2 || sheet.state === 'hidden' || sheet.state === 'veryHidden') {
-                                    ocultas++;
-                                }
-                            });
+                        if (config.hojasOcultas) {
+                            let ocultas = 0;
+                            if (workbook.Workbook && workbook.Workbook.Sheets) {
+                                workbook.Workbook.Sheets.forEach(sheet => {
+                                    if (sheet.Hidden === 1 || sheet.Hidden === 2 || sheet.state === 'hidden' || sheet.state === 'veryHidden') ocultas++;
+                                });
+                            }
+                            info.hojasOcultas = ocultas;
                         }
-                        info.hojasOcultas = ocultas;
 
-                        const sheetName = targetSheetName && workbook.SheetNames.includes(targetSheetName) 
-                                          ? targetSheetName 
-                                          : workbook.SheetNames[0];
-
+                        const sheetName = targetSheetName && workbook.SheetNames.includes(targetSheetName) ? targetSheetName : workbook.SheetNames[0];
                         const worksheet = workbook.Sheets[sheetName];
-                        const json = XLSX.utils.sheet_to_json(worksheet, {header: 1, blankrows: true}); 
+                        const json = XLSX.utils.sheet_to_json(worksheet, {header: 1, blankrows: config.estructura}); 
+                        
                         resolve({ data: json, info: info, preIssues: [], rawSheet: worksheet, sheetName: sheetName });
                     } catch (err) { reject(new Error(`Error Excel (${file.name}): ` + err.message)); }
                 };
@@ -238,13 +394,17 @@
                         const textReader = new FileReader();
                         textReader.onload = (ev) => {
                             const content = ev.target.result;
-                            content.split(/\r?\n/).forEach((line, index) => {
-                                if ((line.match(/"/g) || []).length % 2 !== 0) {
-                                    preIssues.push({ type: 'error', msg: `<b>Fila ${index + 1}:</b> Comillas dobles sin cerrar (impares). Rompe la estructura.` });
-                                }
-                            });
+                            
+                            if (config.estructura) {
+                                content.split(/\r?\n/).forEach((line, index) => {
+                                    if ((line.match(/"/g) || []).length % 2 !== 0) {
+                                        preIssues.push({ type: 'error', msg: `<b>Fila ${index + 1}:</b> Comillas dobles sin cerrar (impares). Rompe la estructura.` });
+                                    }
+                                });
+                            }
+
                             Papa.parse(content, {
-                                skipEmptyLines: false,
+                                skipEmptyLines: !config.estructura,
                                 complete: (res) => resolve({ data: res.data, info: info, preIssues: preIssues, rawSheet: null, sheetName: 'CSV/TXT' }),
                                 error: (err) => reject(new Error("Error CSV: " + err.message))
                             });
@@ -259,7 +419,7 @@
         });
     }
 
-    function inferirTipoColumna(data, colIndex) {
+    function inferirTipoColumna(data, colIndex, config) {
         let counts = { 'Fecha': 0, 'Número/Moneda': 0, 'Texto': 0 };
         let validRows = 0;
         
@@ -268,7 +428,8 @@
         const regexAlphaMonth = /^(\d{1,2})[\/\-\.\s]([a-zA-Z]{3,9})[\/\-\.\s](\d{4}|\d{2})(?:\s|$|T)/;
         const regexNumeric = /^[\$€£]?\s*-?[\d\.,]+$/;
 
-        const limit = Math.min(data.length, 51); 
+        const limit = config.exhaustivo ? data.length : Math.min(data.length, 51); 
+        
         for (let r = 1; r < limit; r++) {
             if (!data[r]) continue;
             let cell = data[r][colIndex];
@@ -276,15 +437,12 @@
             
             validRows++;
             
-            if (cell instanceof Date) {
-                counts['Fecha']++;
-                continue;
-            }
+            if (cell instanceof Date) { counts['Fecha']++; continue; }
             
             let str = String(cell).trim();
             if (!str) continue;
 
-            if (regexCompactDate.test(str) || regexDate.test(str) || regexAlphaMonth.test(str)) {
+            if (config.fechas && (regexCompactDate.test(str) || regexDate.test(str) || regexAlphaMonth.test(str))) {
                 counts['Fecha']++;
             } else if (regexNumeric.test(str) && /\d/.test(str)) { 
                 counts['Número/Moneda']++;
@@ -303,36 +461,62 @@
         return dominante;
     }
 
-    function ejecutarAuditoria(filesData) {
+    function ejecutarAuditoria(filesData, config) {
         let issues = [...filesData.client.preIssues];
         
-        validarDatosLimpios(filesData.client.data, issues, filesData.client.info);
+        validarDatosLimpios(filesData.client.data, issues, filesData.client.info, config);
 
-        if (filesData.client.info.hojasOcultas > 0) {
-            issues.push({
-                type: 'warning',
-                msg: `⚠️ <b>Libro Complejo:</b> Se detectaron <b>${filesData.client.info.hojasOcultas}</b> pestaña(s) ocultas en el archivo de Excel.`
-            });
+        if (config.duplicados.check && filesData.client.data && filesData.client.data.length > 0) {
+            const data = filesData.client.data;
+            const colIdx = config.duplicados.colIndex;
+            const headers = data[0] || [];
+            const colName = headers[colIdx] ? headers[colIdx] : `Columna ${getColumnLetter(colIdx)}`;
+            
+            const seen = new Set();
+            const duplicates = new Set();
+            let duplicateRowsCount = 0;
+            
+            for (let r = 1; r < data.length; r++) {
+                const row = data[r];
+                if (!Array.isArray(row) || row.length === 0 || row.every(c => c === null || c === undefined || String(c).trim() === '')) continue;
+                
+                let val = row[colIdx];
+                if (val === undefined || val === null || val === '') continue; 
+                val = String(val).trim();
+                
+                if (seen.has(val)) {
+                    duplicates.add(val);
+                    duplicateRowsCount++;
+                } else {
+                    seen.add(val);
+                }
+            }
+            
+            filesData.client.info.duplicados = { count: duplicateRowsCount, colName: colName };
+            
+            if (duplicateRowsCount > 0) {
+                issues.push({ type: 'error', msg: `🚨 <b>¡ALERTA DUPLICADOS!</b> Se encontraron <b>${duplicateRowsCount}</b> repetidos en "${colName}".<br>➤ Ejemplos: <i>${Array.from(duplicates).slice(0, 7).join(', ')}</i>`});
+            } else {
+                issues.push({ type: 'info', msg: `✅ <b>Validación IDs:</b> Sin duplicados en "${colName}".`});
+            }
+        }
+
+        if (config.hojasOcultas && filesData.client.info.hojasOcultas > 0) {
+            issues.push({ type: 'warning', msg: `⚠️ <b>Libro Complejo:</b> Hay <b>${filesData.client.info.hojasOcultas}</b> pestaña(s) ocultas en Excel.` });
         }
 
         let tieneFormulasCliente = false;
-        if (filesData.client.rawSheet && !filesData.client.info.esTexto) {
+        if (config.formulas && filesData.client.rawSheet && !filesData.client.info.esTexto) {
             const ws = filesData.client.rawSheet;
             for (const key in ws) {
                 if (key[0] === '!') continue; 
-                if (ws[key] && ws[key].f) {
-                    tieneFormulasCliente = true;
-                    break; 
-                }
+                if (ws[key] && ws[key].f) { tieneFormulasCliente = true; break; }
             }
         }
         filesData.client.info.tieneFormulas = tieneFormulasCliente;
 
         if (tieneFormulasCliente) {
-            issues.push({
-                type: 'warning',
-                msg: `⚠️ <b>Riesgo Detectado:</b> El archivo del cliente contiene <b>fórmulas</b>. Cópialas como "Solo Valores".`
-            });
+            issues.push({ type: 'warning', msg: `⚠️ <b>Riesgo Detectado:</b> El archivo contiene <b>fórmulas</b>.` });
         }
 
         let infoMapeo = { texto: '-', color: '#bdc3c7' }; 
@@ -355,10 +539,9 @@
                 if (headerValue === undefined || headerValue === null || headerValue === '') continue;
 
                 let tieneFormula = false;
-                if (filesData.template.rawSheet) {
+                if (config.formulas && filesData.template.rawSheet) {
                     const ws = filesData.template.rawSheet;
                     const range = XLSX.utils.decode_range(ws['!ref']);
-                    
                     if (C >= range.s.c && C <= range.e.c) {
                         for (let R = range.s.r + 1; R <= Math.min(range.e.r, range.s.r + 20); ++R) {
                             const cellAddress = XLSX.utils.encode_cell({r: R, c: C});
@@ -368,11 +551,8 @@
                     }
                 }
 
-                if (tieneFormula) {
-                    columnasIgnoradas++;
-                } else {
-                    templateValidCols.push({ name: headerValue, originalIndex: C });
-                }
+                if (tieneFormula) columnasIgnoradas++;
+                else templateValidCols.push({ name: headerValue, originalIndex: C });
             }
 
             const countClient = clientValidHeaders.length;
@@ -381,10 +561,7 @@
             if (countClient !== countTemplate) {
                 infoMapeo.texto = `${countClient} vs ${countTemplate}`;
                 infoMapeo.color = countClient > countTemplate ? '#f39c12' : '#e74c3c'; 
-                issues.push({
-                    type: countClient > countTemplate ? 'warning' : 'error',
-                    msg: `<b>Discrepancia de Columnas:</b> El cliente tiene <b>${countClient}</b> columnas, pero la plantilla exige <b>${countTemplate}</b>.`
-                });
+                issues.push({ type: countClient > countTemplate ? 'warning' : 'error', msg: `<b>Discrepancia Columnas:</b> Cliente tiene <b>${countClient}</b>, plantilla exige <b>${countTemplate}</b>.` });
             } else {
                 infoMapeo.texto = `${countClient} (OK)`;
                 infoMapeo.color = '#27ae60'; 
@@ -396,20 +573,14 @@
                 const nombrePlantilla = String(templateValidCols[i].name).trim();
                 
                 if (nombreCliente.toLowerCase() !== nombrePlantilla.toLowerCase()) {
-                    issues.push({
-                        type: 'warning',
-                        msg: `⚠️ <b>Discrepancia en Columna ${getColumnLetter(i)} (Encabezado):</b> En el cliente se llama <b>"${nombreCliente}"</b>, la plantilla espera <b>"${nombrePlantilla}"</b>.`
-                    });
+                    issues.push({ type: 'warning', msg: `⚠️ <b>Discrepancia Columna ${getColumnLetter(i)}:</b> Cliente dice <b>"${nombreCliente}"</b>, plantilla espera <b>"${nombrePlantilla}"</b>.` });
                 }
 
-                const tipoCliente = inferirTipoColumna(filesData.client.data, i);
-                const tipoPlantilla = inferirTipoColumna(filesData.template.data, templateValidCols[i].originalIndex);
+                const tipoCliente = inferirTipoColumna(filesData.client.data, i, config);
+                const tipoPlantilla = inferirTipoColumna(filesData.template.data, templateValidCols[i].originalIndex, config);
 
                 if (tipoCliente !== 'Vacío' && tipoPlantilla !== 'Vacío' && tipoCliente !== tipoPlantilla) {
-                    issues.push({
-                        type: 'error',
-                        msg: `🚨 <b>Incompatibilidad de Datos en Columna ${getColumnLetter(i)}:</b> El cliente contiene <b>${tipoCliente}</b>, pero la plantilla requiere <b>${tipoPlantilla}</b>.`
-                    });
+                    issues.push({ type: 'error', msg: `🚨 <b>Incompatibilidad Datos Columna ${getColumnLetter(i)}:</b> Cliente envió <b>${tipoCliente}</b>, plantilla requiere <b>${tipoPlantilla}</b>.` });
                 }
             }
         }
@@ -418,22 +589,33 @@
         renderizarResultadosCliente(issues, filesData.client.info, filesData.client.sheetName);
     }
 
-    function validarDatosLimpios(data, issues, info) {
+    function validarDatosLimpios(data, issues, info, config) {
+        // Expresiones matemáticas protegidas contra falsos positivos numéricos
         const regexISO = /^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})(?:\s|$|T)/; 
         const regexEndYear = /^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4}|\d{2})(?:\s|$|T)/; 
         const regexAlphaMonth = /^(\d{1,2})[\/\-\.\s]([a-zA-Z]{3,9})[\/\-\.\s](\d{4}|\d{2})(?:\s|$|T)/; 
         const regexCompact = /^(19|20)\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])$/; 
-        const regexNoYear = /^(\d{1,2})[\/\-\.](\d{1,2})$/; 
+        const regexNoYear = /^(\d{1,2})[\/\-](\d{1,2})$/; // Retirado el punto para evitar detectar 80.00 como fecha
 
         const formatosPorColumna = {}; 
         let filasVacias = 0;
         
         const headers = data[0] || [];
+        
+        // Decodificamos el array de columnas objetivo si seleccionó CUSTOM
+        let targetDateCols = null; 
+        if (config.fechas) {
+            if (config.fechasModo === 'CUSTOM') {
+                targetDateCols = parseTargetCols(config.fechasColsTxt);
+            } else if (config.fechasModo !== 'ALL') {
+                targetDateCols = [parseInt(config.fechasModo)];
+            }
+        }
 
         data.forEach((row, rowIndex) => {
             const isLastRow = rowIndex === data.length - 1;
             if (!Array.isArray(row) || row.length === 0 || row.every(c => c === null || c === undefined || String(c).trim() === '')) {
-                if (!isLastRow) filasVacias++;
+                if (config.estructura && !isLastRow) filasVacias++;
                 return;
             }
 
@@ -442,133 +624,137 @@
             row.forEach((cell, colIndex) => {
                 if (cell === null || cell === undefined || cell === '') return;
                 
-                if (!formatosPorColumna[colIndex]) {
+                const checkDateThisCol = config.fechas && (targetDateCols === null || targetDateCols.includes(colIndex));
+                
+                if (checkDateThisCol && !formatosPorColumna[colIndex]) {
                     formatosPorColumna[colIndex] = {};
                 }
                 
                 let formato = null;
 
                 if (cell instanceof Date) { 
-                    formato = 'Formato Excel Nivel Sistema';
+                    if (checkDateThisCol) formato = 'Formato Excel Nivel Sistema';
                 } else if (typeof cell === 'string') {
                     const evalString = cell.trim();
-                    if (evalString !== cell) issues.push({ type: 'warning', msg: `<b>Fila ${rowIndex + 1}, Columna ${getColumnLetter(colIndex)}:</b> Espacio en blanco oculto al inicio o final.` });
+                    if (config.estructura && evalString !== cell) {
+                        issues.push({ type: 'warning', msg: `<b>Fila ${rowIndex + 1}, Columna ${getColumnLetter(colIndex)}:</b> Espacio en blanco oculto al inicio o final.` });
+                    }
                     
-                    if (regexCompact.test(evalString)) formato = 'Texto: ISO (AAAAMMDD)';
-                    else if (regexISO.test(evalString)) formato = 'Texto: ISO (AAAA/MM/DD)';
-                    else if (regexAlphaMonth.test(evalString)) formato = 'Texto: DD/MMM/AAAA';
-                    else {
-                        let m = evalString.match(regexEndYear);
-                        if (m) {
-                            const p1 = parseInt(m[1], 10), p2 = parseInt(m[2], 10);
-                            if (p1 > 12 && p2 <= 12) formato = 'Texto: DD/MM/AAAA';
-                            else if (p1 <= 12 && p2 > 12) formato = 'Texto: MM/DD/AAAA';
-                            else if (p1 <= 12 && p2 <= 12) formato = 'Ambiguo';
-                        } else {
-                            m = evalString.match(regexNoYear);
+                    if (checkDateThisCol) {
+                        if (regexCompact.test(evalString)) formato = 'Texto: ISO (AAAAMMDD)';
+                        else if (regexISO.test(evalString)) formato = 'Texto: ISO (AAAA/MM/DD)';
+                        else if (regexAlphaMonth.test(evalString)) formato = 'Texto: DD/MMM/AAAA';
+                        else {
+                            let m = evalString.match(regexEndYear);
                             if (m) {
                                 const p1 = parseInt(m[1], 10), p2 = parseInt(m[2], 10);
-                                if (p1 > 12 && p2 <= 12) formato = 'Texto: DD/MM';
-                                else if (p1 <= 12 && p2 > 12) formato = 'Texto: MM/DD';
-                                else if (p1 <= 12 && p2 <= 12) formato = 'Ambiguo';
+                                // Validación matemática estricta para días y meses
+                                if (p1 > 0 && p1 <= 31 && p2 > 0 && p2 <= 31) {
+                                    if (p1 > 12 && p2 <= 12) formato = 'Texto: DD/MM/AAAA';
+                                    else if (p1 <= 12 && p2 > 12) formato = 'Texto: MM/DD/AAAA';
+                                    else if (p1 <= 12 && p2 <= 12) formato = 'Ambiguo';
+                                }
+                            } else {
+                                m = evalString.match(regexNoYear);
+                                if (m) {
+                                    const p1 = parseInt(m[1], 10), p2 = parseInt(m[2], 10);
+                                    // Validación matemática estricta para días y meses sin año
+                                    if (p1 > 0 && p1 <= 31 && p2 > 0 && p2 <= 31) {
+                                        if (p1 > 12 && p2 <= 12) formato = 'Texto: DD/MM';
+                                        else if (p1 <= 12 && p2 > 12) formato = 'Texto: MM/DD';
+                                        else if (p1 <= 12 && p2 <= 12) formato = 'Ambiguo';
+                                    }
+                                }
                             }
                         }
                     }
                 }
 
-                if (formato) {
-                    if (!formatosPorColumna[colIndex][formato]) {
-                        formatosPorColumna[colIndex][formato] = [];
-                    }
-                    if (formatosPorColumna[colIndex][formato].length < 3) {
-                        formatosPorColumna[colIndex][formato].push(rowIndex + 1); 
-                    }
+                if (checkDateThisCol && formato) {
+                    if (!formatosPorColumna[colIndex][formato]) formatosPorColumna[colIndex][formato] = [];
+                    if (formatosPorColumna[colIndex][formato].length < 3) formatosPorColumna[colIndex][formato].push(rowIndex + 1); 
                 }
             });
         });
 
-        if (filasVacias > 0) {
-            issues.push({ 
-                type: 'warning', 
-                msg: `⚠️ <b>Filas Vacías Detectadas:</b> Hay <b>${filasVacias}</b> fila(s) completamente en blanco (saltos de línea). Esto suele interrumpir la importación.` 
-            });
+        if (config.estructura && filasVacias > 0) {
+            issues.push({ type: 'warning', msg: `⚠️ <b>Filas Vacías Detectadas:</b> Hay <b>${filasVacias}</b> fila(s) en blanco que rompen la estructura.` });
         }
 
-        let tieneFechas = false;
-        let mezclaEnAlgunaColumna = false;
-        let formatosPuros = new Set();
+        if (config.fechas) {
+            let tieneFechas = false;
+            let mezclaEnAlgunaColumna = false;
+            let formatosPuros = new Set();
 
-        for (const [colIndex, objFormatos] of Object.entries(formatosPorColumna)) {
-            const defs = Object.keys(objFormatos).filter(f => f !== 'Ambiguo');
-            if (defs.length > 0) tieneFechas = true;
-            
-            if (defs.length > 1) {
-                mezclaEnAlgunaColumna = true;
-                const colLetter = getColumnLetter(parseInt(colIndex));
-                const colHeaderName = headers[parseInt(colIndex)] ? headers[parseInt(colIndex)] : `Sin Nombre`;
+            for (const [colIndex, objFormatos] of Object.entries(formatosPorColumna)) {
+                const defs = Object.keys(objFormatos).filter(f => f !== 'Ambiguo');
+                if (defs.length > 0) tieneFechas = true;
                 
-                const detalles = defs.map(f => `<b>${f}</b> (ej. filas: ${objFormatos[f].join(', ')})`).join('<br>➤ ');
+                if (defs.length > 1) {
+                    mezclaEnAlgunaColumna = true;
+                    const colLetter = getColumnLetter(parseInt(colIndex));
+                    const colHeaderName = headers[parseInt(colIndex)] ? headers[parseInt(colIndex)] : `Sin Nombre`;
+                    const detalles = defs.map(f => `<b>${f}</b> (ej. filas: ${objFormatos[f].join(', ')})`).join('<br>➤ ');
 
-                issues.push({ 
-                    type: 'critical', 
-                    msg: `🚨 <b>¡ALERTA COLUMNA ${colLetter} ("${colHeaderName}")!</b> Mezcla de fechas detectada:<br>➤ ${detalles}<br><br><i>Corrige esta mezcla antes de importar para evitar errores.</i>` 
-                });
-            } else if (defs.length === 1) {
-                formatosPuros.add(defs[0]);
+                    issues.push({ type: 'critical', msg: `🚨 <b>¡ALERTA COLUMNA ${colLetter} ("${colHeaderName}")!</b> Mezcla de fechas detectada:<br>➤ ${detalles}` });
+                } else if (defs.length === 1) {
+                    formatosPuros.add(defs[0]);
+                }
             }
-        }
 
-        if (!tieneFechas) {
-            info.estadoFechaTexto = 'Ninguna';
-            info.estadoFechaColor = '#bdc3c7';
-        } else if (mezclaEnAlgunaColumna) {
-            info.estadoFechaTexto = 'Mezcla (Ver Alertas)';
-            info.estadoFechaColor = '#e74c3c'; // Rojo
-        } else if (formatosPuros.size === 1) {
-            info.estadoFechaTexto = Array.from(formatosPuros)[0];
-            info.estadoFechaColor = '#3498db'; // Azul
-        } else {
-            info.estadoFechaTexto = 'Sanas (Varias Cols)';
-            info.estadoFechaColor = '#27ae60'; // Verde
+            if (!tieneFechas) { info.estadoFechaTexto = 'Ninguna'; info.estadoFechaColor = '#bdc3c7'; } 
+            else if (mezclaEnAlgunaColumna) { info.estadoFechaTexto = 'Mezcla (Riesgo)'; info.estadoFechaColor = '#e74c3c'; } 
+            else if (formatosPuros.size === 1) { info.estadoFechaTexto = Array.from(formatosPuros)[0]; info.estadoFechaColor = '#3498db'; } 
+            else { info.estadoFechaTexto = 'Sanas (Varias Cols)'; info.estadoFechaColor = '#27ae60'; }
         }
     }
 
     function renderizarResultadosCliente(issues, info, sheetName) {
         const resultsDiv = document.getElementById('results');
         const dashDiv = document.getElementById('dashboardContainer');
+        const cfg = info.config;
         
         let counts = { critical: 0, error: 0, warning: 0, info: 0 };
         issues.forEach(i => counts[i.type]++);
 
-        let formulaColor = '#bdc3c7', formulaText = 'N/A';
-        let hiddenColor = '#bdc3c7', hiddenText = 'N/A';
-
+        let tarjetasHTML = '';
+        
+        tarjetasHTML += `<div class="dash-card" style="border-top: 4px solid #16a085;">Archivo <span>${info.type}</span></div>`;
+        tarjetasHTML += `<div class="dash-card" style="border-top: 4px solid #8e44ad;">Hoja <span>${sheetName}</span></div>`;
+        
         if (!info.esTexto) {
-            formulaColor = info.tieneFormulas ? '#f39c12' : '#27ae60';
-            formulaText = info.tieneFormulas ? 'SÍ (Riesgo)' : 'NO (Limpio)';
-            hiddenColor = info.hojasOcultas > 0 ? '#f39c12' : '#27ae60';
-            hiddenText = info.hojasOcultas > 0 ? `SÍ (${info.hojasOcultas})` : 'NO';
+            let formulaColor = cfg.formulas ? (info.tieneFormulas ? '#f39c12' : '#27ae60') : '#bdc3c7';
+            let formulaText = cfg.formulas ? (info.tieneFormulas ? 'SÍ (Riesgo)' : 'NO (Limpio)') : 'Omitido';
+            tarjetasHTML += `<div class="dash-card" style="border-top: 4px solid ${formulaColor};">Fórmulas <span>${formulaText}</span></div>`;
+            
+            if (cfg.hojasOcultas || info.duplicados) {
+                let hiddenColor = cfg.hojasOcultas ? (info.hojasOcultas > 0 ? '#f39c12' : '#27ae60') : '#bdc3c7';
+                let hiddenText = cfg.hojasOcultas ? (info.hojasOcultas > 0 ? `SÍ (${info.hojasOcultas})` : 'NO') : 'Omitido';
+                if (!info.duplicados) tarjetasHTML += `<div class="dash-card" style="border-top: 4px solid ${hiddenColor};">Hojas Ocultas <span>${hiddenText}</span></div>`;
+            }
+        } else {
+            tarjetasHTML += `<div class="dash-card" style="border-top: 4px solid #3498db;">Codificación <span>${info.encoding}</span></div>`;
         }
 
-        let dateColor = info.estadoFechaColor || '#bdc3c7';
-        let dateText = info.estadoFechaTexto || 'Ninguna';
+        let dateColor = cfg.fechas ? (info.estadoFechaColor || '#bdc3c7') : '#bdc3c7';
+        let dateText = cfg.fechas ? (info.estadoFechaTexto || 'Ninguna') : 'Omitido';
+        tarjetasHTML += `<div class="dash-card" style="border-top: 4px solid ${dateColor};">Formato Fecha <span style="color:${dateColor}">${dateText}</span></div>`;
+        
+        if (info.duplicados) {
+            let dupColor = info.duplicados.count > 0 ? '#e74c3c' : '#27ae60';
+            let dupText = info.duplicados.count > 0 ? `SÍ (${info.duplicados.count})` : 'NO (Limpio)';
+            tarjetasHTML += `<div class="dash-card" style="border-top: 4px solid ${dupColor};">Duplicados <span>${dupText}</span></div>`;
+        }
+        
+        tarjetasHTML += `<div class="dash-card" style="border-top: 4px solid ${info.mapeo.color};">Columnas <span style="color:${info.mapeo.color}">${info.mapeo.texto}</span></div>`;
+        tarjetasHTML += `<div class="dash-card" style="border-top: 4px solid #e74c3c;">Alertas Totales <span>${counts.error + counts.warning + counts.critical}</span></div>`;
 
-        dashDiv.innerHTML = `
-            <div class="dashboard">
-                <div class="dash-card" style="border-top: 4px solid #16a085;">Archivo <span>${info.type}</span></div>
-                <div class="dash-card" style="border-top: 4px solid #8e44ad;">Hoja Analizada <span>${sheetName}</span></div>
-                <div class="dash-card" style="border-top: 4px solid #3498db;">Codificación <span>${info.encoding}</span></div>
-                <div class="dash-card" style="border-top: 4px solid ${dateColor};">Formato Fecha <span style="color:${dateColor}">${dateText}</span></div>
-                <div class="dash-card" style="border-top: 4px solid ${formulaColor};">Fórmulas <span>${formulaText}</span></div>
-                <div class="dash-card" style="border-top: 4px solid ${info.mapeo.color};">Columnas <span style="color:${info.mapeo.color}">${info.mapeo.texto}</span></div>
-                <div class="dash-card" style="border-top: 4px solid #e74c3c;">Alertas <span>${counts.error + counts.warning + counts.critical}</span></div>
-            </div>
-        `;
+        dashDiv.innerHTML = `<div class="dashboard">${tarjetasHTML}</div>`;
 
         let html = `<h2 class="section-title">Análisis de Datos (Archivo Cliente)</h2>`;
 
         if (issues.length === 0 || (issues.every(i => i.type === 'info'))) {
-            html += '<div class="success">✅ Análisis finalizado. Los datos están limpios y son seguros para importar.</div>';
+            html += '<div class="success">✅ Análisis finalizado. No se detectaron problemas con los parámetros seleccionados.</div>';
             issues.forEach(i => html += `<div class="issue-card info">${i.msg}</div>`);
         } else {
             issues.sort((a, b) => {
@@ -576,7 +762,8 @@
                 return order[a.type] - order[b.type];
             });
 
-            const max = 100;
+            // Si Exhaustivo está activo no hay límite (o límite muy alto), de lo contrario 10,000 max.
+            const max = cfg.exhaustivo ? issues.length : 10000;
             if (issues.length > max) html += `<p><i>Mostrando los primeros ${max} hallazgos...</i></p>`;
 
             issues.slice(0, max).forEach(issue => {
