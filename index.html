@@ -4,29 +4,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>File Checker</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jschardet/3.0.0/jschardet.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; color: #333; margin: 0; padding: 20px; }
         .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        h1 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-bottom: 20px; }
+        
+        /* Nuevo Header con Logo */
+        .header-container { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #3498db; padding-bottom: 15px; margin-bottom: 25px; }
+        .header-container h1 { color: #2c3e50; margin: 0; padding: 0; font-size: 28px; }
+        .header-logo { max-height: 50px; width: auto; object-fit: contain; } /* Ajuste de altura máxima del logo */
         
         .upload-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; margin-bottom: 20px; }
         .upload-box { border: 2px dashed #bdc3c7; padding: 20px; text-align: center; border-radius: 8px; background-color: #f8f9fa; transition: all 0.3s; }
         .upload-box.required { border-color: #3498db; background-color: #ebf5fb; }
         
-        /* Nueva estructura de botones fijos */
         .upload-label { display: block; cursor: pointer; padding-bottom: 5px; }
         .upload-label h3 { font-size: 16px; margin-top: 0; color: #2c3e50; transition: color 0.3s; }
         .upload-label:hover h3 { color: #3498db; }
-        .upload-box input[type="file"] { display: none; } /* Ahora el input está oculto, usamos el label */
+        .upload-box input[type="file"] { display: none; } 
         
         .file-name { display: block; margin-top: 10px; font-weight: bold; font-size: 14px; color: #16a085; min-height: 20px; }
         
         .sheet-selector { display: none; width: 100%; margin-top: 15px; padding: 10px; border-radius: 5px; border: 1px solid #3498db; background-color: #fff; font-family: inherit; font-size: 14px; color: #2c3e50; cursor: pointer; font-weight: bold; }
         
-        /* Panel de Configuración */
         .config-panel { background: #fdfefe; border: 1px solid #d5dbdb; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
         .config-panel h3 { margin-top: 0; color: #2c3e50; font-size: 16px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
         .config-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; }
@@ -64,17 +68,20 @@
 <body>
 
 <div class="container">
-    <h1>Auditor Integral de Archivos</h1>
+    
+    <div class="header-container">
+        <h1>Auditor Integral de Archivos</h1>
+        <img src="logo.png" alt="Logo" class="header-logo" onerror="this.style.display='none'"> 
+    </div>
     
     <div class="upload-grid">
         <div class="upload-box required" id="boxClient">
             <label for="clientFile" class="upload-label">
-                <h3>1. Archivo Origen (Requerido)</h3>
+                <h3>1. Archivo Origen(Requerido)</h3>
                 <p>Datos a importar.</p>
                 <span class="file-name" id="nameClient">Ningún archivo seleccionado</span>
             </label>
             <input type="file" id="clientFile" accept=".xlsx, .xls, .csv, .txt">
-            
             <select id="clientSheetSelector" class="sheet-selector"></select>
         </div>
         
@@ -90,7 +97,7 @@
         <div class="upload-box disabled-box" id="boxErrors">
             <label for="errorsFile" class="upload-label" style="cursor: not-allowed;">
                 <span class="construction-badge">🚧 En construcción 🚧</span>
-                <h3>3. Fallas</h3>
+                <h3>3. Fallas </h3>
                 <p>Reporte de errores devuelto.</p>
                 <span class="file-name" id="nameErrors" style="color: #95a5a6;">Módulo inhabilitado</span>
             </label>
@@ -115,19 +122,21 @@
             </label>
             
             <div style="grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; margin-top: 5px; border-top: 1px dashed #ddd; padding-top: 15px; flex-wrap: wrap;">
+                
                 <label class="config-item">
                     <input type="checkbox" id="chkFechas" checked> 📅 Analizar Fechas en:
                 </label>
                 <select id="selFechasModo" class="sheet-selector" style="display: inline-block; width: auto; margin-top: 0; padding: 5px;">
                     <option value="ALL">Todas las columnas</option>
-                    <option value="CUSTOM">Múltiples letras (Ej: A, C, D)</option>
+                    <option value="CUSTOM">Múltiples letras (Ej: A, C)</option>
                 </select>
-                <input type="text" id="txtFechasCols" placeholder="Ej: A, C, AA" style="display: none; padding: 5px; border-radius: 4px; border: 1px solid #3498db; width: 140px; font-weight: bold; color: #2c3e50;">
+                <input type="text" id="txtFechasCols" placeholder="Ej: A, C, AA" style="display: none; padding: 5px; border-radius: 4px; border: 1px solid #3498db; width: 100px; font-weight: bold; color: #2c3e50;">
                 
                 <span style="width: 20px;"></span><label class="config-item">
                     <input type="checkbox" id="chkDuplicates"> 🔍 Duplicados en:
                 </label>
                 <select id="colDuplicateSelector" class="sheet-selector" style="display: none; margin-top: 0; width: auto; padding: 5px;"></select>
+                <input type="text" id="txtDupCols" placeholder="Ej: A, B" title="Columnas a concatenar" style="display: none; padding: 5px; border-radius: 4px; border: 1px solid #3498db; width: 100px; font-weight: bold; color: #2c3e50;">
                 <span id="dupWarning" style="display:none; color:#e74c3c; font-size:12px; font-weight:bold;">¡Sube un archivo primero!</span>
             </div>
         </div>
@@ -161,6 +170,7 @@
 
     const chkDuplicates = document.getElementById('chkDuplicates');
     const colDuplicateSelector = document.getElementById('colDuplicateSelector');
+    const txtDupCols = document.getElementById('txtDupCols');
 
     function getColumnLetter(colIndex) {
         let letter = '';
@@ -173,32 +183,41 @@
     }
 
     function populateSelectors(headers) {
+        // Limpiamos los selectores dinámicos
         colDuplicateSelector.innerHTML = '';
-        
-        // Limpiamos las opciones dinámicas de Fechas, dejando solo 'ALL' y 'CUSTOM'
         Array.from(selFechasModo.options).forEach(opt => {
             if (opt.value !== 'ALL' && opt.value !== 'CUSTOM') opt.remove();
         });
+
+        // Opción CUSTOM para Duplicados al principio
+        const optCustomDup = document.createElement('option');
+        optCustomDup.value = 'CUSTOM';
+        optCustomDup.textContent = 'Múltiples (Concatenar letras)';
+        colDuplicateSelector.appendChild(optCustomDup);
 
         headers.forEach((h, idx) => {
             const letter = getColumnLetter(idx);
             const safeName = h ? h : `Sin nombre`;
             
-            // Llenar selector de Duplicados
             const optD = document.createElement('option');
             optD.value = idx;
             optD.textContent = `${letter} - ${safeName}`;
             colDuplicateSelector.appendChild(optD);
 
-            // Llenar selector de Fechas
             const optF = document.createElement('option');
             optF.value = idx;
             optF.textContent = `Solo ${letter} (${safeName})`;
             selFechasModo.appendChild(optF);
         });
+
+        // Setear Duplicados en la primera columna real (no custom) por defecto
+        if (colDuplicateSelector.options.length > 1) {
+            colDuplicateSelector.selectedIndex = 1;
+            txtDupCols.style.display = 'none';
+        }
     }
 
-    // Interacciones UI - Fechas
+    // Eventos Fechas
     chkFechas.addEventListener('change', (e) => {
         selFechasModo.disabled = !e.target.checked;
         txtFechasCols.disabled = !e.target.checked;
@@ -208,7 +227,7 @@
         txtFechasCols.style.display = e.target.value === 'CUSTOM' ? 'inline-block' : 'none';
     });
 
-    // Interacciones UI - Duplicados
+    // Eventos Duplicados
     chkDuplicates.addEventListener('change', (e) => {
         if (!inputs.client.files[0]) {
             document.getElementById('dupWarning').style.display = 'inline';
@@ -217,8 +236,18 @@
         }
         document.getElementById('dupWarning').style.display = 'none';
         colDuplicateSelector.style.display = e.target.checked ? 'inline-block' : 'none';
+        if (e.target.checked && colDuplicateSelector.value === 'CUSTOM') {
+            txtDupCols.style.display = 'inline-block';
+        } else {
+            txtDupCols.style.display = 'none';
+        }
     });
 
+    colDuplicateSelector.addEventListener('change', (e) => {
+        txtDupCols.style.display = e.target.value === 'CUSTOM' ? 'inline-block' : 'none';
+    });
+
+    // Manejador del Archivo de Cliente
     inputs.client.addEventListener('change', (e) => {
         const file = e.target.files[0];
         const nameSpan = document.getElementById('nameClient');
@@ -277,6 +306,7 @@
             chkDuplicates.checked = false;
             colDuplicateSelector.style.display = 'none';
             colDuplicateSelector.innerHTML = '';
+            txtDupCols.style.display = 'none';
             
             Array.from(selFechasModo.options).forEach(opt => {
                 if (opt.value !== 'ALL' && opt.value !== 'CUSTOM') opt.remove();
@@ -296,16 +326,29 @@
         });
     });
 
-    // Función para transformar el texto "A, B, AA" en un array numérico [0, 1, 26]
+    // Detener clicks
+    clientSheetSelector.addEventListener('click', (e) => e.stopPropagation());
+    clientSheetSelector.addEventListener('mousedown', (e) => e.stopPropagation());
+    colDuplicateSelector.addEventListener('click', (e) => e.stopPropagation());
+    colDuplicateSelector.addEventListener('mousedown', (e) => e.stopPropagation());
+    selFechasModo.addEventListener('click', (e) => e.stopPropagation());
+    selFechasModo.addEventListener('mousedown', (e) => e.stopPropagation());
+    txtFechasCols.addEventListener('click', (e) => e.stopPropagation());
+    txtDupCols.addEventListener('click', (e) => e.stopPropagation());
+
+    // Auxiliar: Transforma "A, B, AA" -> [0, 1, 26]
     function parseTargetCols(str) {
         if (!str) return [];
         return str.toUpperCase().split(',').map(s => s.trim()).filter(s => s).map(s => {
             let col = 0;
-            for(let i = 0; i < s.length; i++) {
-                col = col * 26 + (s.charCodeAt(i) - 64);
+            // Solo procesar letras A-Z
+            let cleanStr = s.replace(/[^A-Z]/g, '');
+            if (!cleanStr) return -1;
+            for(let i = 0; i < cleanStr.length; i++) {
+                col = col * 26 + (cleanStr.charCodeAt(i) - 64);
             }
             return col - 1;
-        });
+        }).filter(c => c >= 0);
     }
 
     btnProcess.addEventListener('click', async () => {
@@ -322,7 +365,8 @@
             exhaustivo: chkExhaustivo.checked,
             duplicados: {
                 check: chkDuplicates.checked,
-                colIndex: chkDuplicates.checked ? parseInt(colDuplicateSelector.value) : null
+                modo: colDuplicateSelector.value,
+                colsTxt: txtDupCols.value
             },
             fechas: chkFechas.checked,
             fechasModo: selFechasModo.value,
@@ -478,38 +522,64 @@
         
         validarDatosLimpios(filesData.client.data, issues, filesData.client.info, config);
 
+        // Lógica Avanzada de Duplicados (Individual o Concatenada)
         if (config.duplicados.check && filesData.client.data && filesData.client.data.length > 0) {
             const data = filesData.client.data;
-            const colIdx = config.duplicados.colIndex;
             const headers = data[0] || [];
-            const colName = headers[colIdx] ? headers[colIdx] : `Columna ${getColumnLetter(colIdx)}`;
             
-            const seen = new Set();
-            const duplicates = new Set();
-            let duplicateRowsCount = 0;
-            
-            for (let r = 1; r < data.length; r++) {
-                const row = data[r];
-                if (!Array.isArray(row) || row.length === 0 || row.every(c => c === null || c === undefined || String(c).trim() === '')) continue;
-                
-                let val = row[colIdx];
-                if (val === undefined || val === null || val === '') continue; 
-                val = String(val).trim();
-                
-                if (seen.has(val)) {
-                    duplicates.add(val);
-                    duplicateRowsCount++;
-                } else {
-                    seen.add(val);
-                }
-            }
-            
-            filesData.client.info.duplicados = { count: duplicateRowsCount, colName: colName };
-            
-            if (duplicateRowsCount > 0) {
-                issues.push({ type: 'error', msg: `🚨 <b>¡ALERTA DUPLICADOS!</b> Se encontraron <b>${duplicateRowsCount}</b> repetidos en "${colName}".<br>➤ Ejemplos: <i>${Array.from(duplicates).slice(0, 7).join(', ')}</i>`});
+            let targetCols = [];
+            let colNameLabel = "";
+
+            if (config.duplicados.modo === 'CUSTOM') {
+                targetCols = parseTargetCols(config.duplicados.colsTxt);
+                colNameLabel = `Concatenado (${config.duplicados.colsTxt.toUpperCase()})`;
             } else {
-                issues.push({ type: 'info', msg: `✅ <b>Validación IDs:</b> Sin duplicados en "${colName}".`});
+                const cIdx = parseInt(config.duplicados.modo);
+                targetCols = [cIdx];
+                colNameLabel = headers[cIdx] ? headers[cIdx] : `Columna ${getColumnLetter(cIdx)}`;
+            }
+
+            if (targetCols.length > 0) {
+                const seen = new Set();
+                const duplicates = new Set();
+                let duplicateRowsCount = 0;
+                
+                for (let r = 1; r < data.length; r++) {
+                    const row = data[r];
+                    if (!Array.isArray(row) || row.length === 0 || row.every(c => c === null || c === undefined || String(c).trim() === '')) continue;
+                    
+                    let compositeParts = [];
+                    let hasAnyValue = false;
+
+                    for (let c of targetCols) {
+                        let val = row[c];
+                        if (val !== undefined && val !== null && val !== '') {
+                            hasAnyValue = true;
+                            compositeParts.push(String(val).trim());
+                        } else {
+                            compositeParts.push(""); // Mantener espacio si está vacío en la concatenación
+                        }
+                    }
+                    
+                    if (!hasAnyValue) continue;
+
+                    const compositeKey = compositeParts.join(" | ");
+                    
+                    if (seen.has(compositeKey)) {
+                        duplicates.add(compositeKey);
+                        duplicateRowsCount++;
+                    } else {
+                        seen.add(compositeKey);
+                    }
+                }
+                
+                filesData.client.info.duplicados = { count: duplicateRowsCount, colName: colNameLabel };
+                
+                if (duplicateRowsCount > 0) {
+                    issues.push({ type: 'error', msg: `🚨 <b>¡ALERTA DUPLICADOS!</b> Se encontraron <b>${duplicateRowsCount}</b> repeticiones en <b>${colNameLabel}</b>.<br>➤ Ejemplos: <br><i>${Array.from(duplicates).slice(0, 7).join('<br>')}</i>`});
+                } else {
+                    issues.push({ type: 'info', msg: `✅ <b>Validación IDs:</b> Sin duplicados en ${colNameLabel}.`});
+                }
             }
         }
 
