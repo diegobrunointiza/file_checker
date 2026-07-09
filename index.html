@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>File Checker</title>
+    <title>Auditor y Conciliador de Archivos v5.0</title>
     <link rel="icon" type="image/png" href="favicon.png">
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -13,37 +13,30 @@
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; color: #333; margin: 0; padding: 20px; }
         .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         
-        /* Nuevo Header con Logo */
-        .header-container { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #3498db; padding-bottom: 15px; margin-bottom: 25px; }
+        .header-container { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #3498db; padding-bottom: 15px; margin-bottom: 20px; }
         .header-container h1 { color: #2c3e50; margin: 0; padding: 0; font-size: 28px; }
-        .header-logo { max-height: 50px; width: auto; object-fit: contain; } /* Ajuste de altura máxima del logo */
+        .header-logo { max-height: 50px; width: auto; object-fit: contain; }
         
+        /* Sistema de Solapas (Tabs) */
+        .tabs-nav { display: flex; gap: 10px; margin-bottom: 25px; border-bottom: 2px solid #ecf0f1; padding-bottom: 10px; }
+        .tab-btn { background: none; border: none; padding: 10px 20px; font-size: 18px; font-weight: bold; color: #7f8c8d; cursor: pointer; border-radius: 5px; transition: all 0.3s; }
+        .tab-btn:hover { background: #eaeded; color: #2c3e50; }
+        .tab-btn.active { background: #3498db; color: white; box-shadow: 0 2px 4px rgba(52, 152, 219, 0.3); }
+        .tab-content { display: none; animation: fadeIn 0.4s; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Estructuras generales */
         .upload-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; margin-bottom: 20px; }
         .upload-box { border: 2px dashed #bdc3c7; padding: 20px; text-align: center; border-radius: 8px; background-color: #f8f9fa; transition: all 0.3s; }
         .upload-box.required { border-color: #3498db; background-color: #ebf5fb; }
-        
         .upload-label { display: block; cursor: pointer; padding-bottom: 5px; }
         .upload-label h3 { font-size: 16px; margin-top: 0; color: #2c3e50; transition: color 0.3s; }
         .upload-label:hover h3 { color: #3498db; }
         .upload-box input[type="file"] { display: none; } 
-        
         .file-name { display: block; margin-top: 10px; font-weight: bold; font-size: 14px; color: #16a085; min-height: 20px; }
-        
         .sheet-selector { display: none; width: 100%; margin-top: 15px; padding: 10px; border-radius: 5px; border: 1px solid #3498db; background-color: #fff; font-family: inherit; font-size: 14px; color: #2c3e50; cursor: pointer; font-weight: bold; }
         
-        .config-panel { background: #fdfefe; border: 1px solid #d5dbdb; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-        .config-panel h3 { margin-top: 0; color: #2c3e50; font-size: 16px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
-        .config-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; }
-        .config-item { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #34495e; font-weight: 600; cursor: pointer; }
-        .config-item input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; accent-color: #3498db; }
-        .config-item.danger input[type="checkbox"] { accent-color: #e74c3c; }
-        .config-item.danger { color: #c0392b; }
-        
-        .upload-box.disabled-box { border-color: #d5dbdb; background-color: #eaeded; opacity: 0.7; cursor: not-allowed; }
-        .upload-box.disabled-box .upload-label { cursor: not-allowed; }
-        .upload-box.disabled-box h3, .upload-box.disabled-box p { color: #95a5a6; }
-        .construction-badge { background-color: #f39c12; color: white; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; display: inline-block; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
-
         .btn-process { width: 100%; background-color: #2ecc71; color: white; padding: 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 18px; font-weight: bold; margin-bottom: 20px; transition: background 0.3s; }
         .btn-process:hover { background-color: #27ae60; }
         .btn-process:disabled { background-color: #95a5a6; cursor: not-allowed; }
@@ -63,115 +56,156 @@
         .error-table th, .error-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
         .error-table th { background-color: #e74c3c; color: white; }
         .error-table tr:nth-child(even) { background-color: #f9f9f9; }
+
+        /* Estilos específicos de Auditor */
+        .config-panel { background: #fdfefe; border: 1px solid #d5dbdb; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .config-panel h3 { margin-top: 0; color: #2c3e50; font-size: 16px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .config-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; }
+        .config-item { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #34495e; font-weight: 600; cursor: pointer; }
+        .config-item input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; accent-color: #3498db; }
+        .config-item.danger input[type="checkbox"] { accent-color: #e74c3c; }
+        .config-item.danger { color: #c0392b; }
+        .upload-box.disabled-box { border-color: #d5dbdb; background-color: #eaeded; opacity: 0.7; cursor: not-allowed; }
+        .upload-box.disabled-box .upload-label { cursor: not-allowed; }
+        .upload-box.disabled-box h3, .upload-box.disabled-box p { color: #95a5a6; }
+        .construction-badge { background-color: #f39c12; color: white; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; display: inline-block; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
+
+        /* Estilos específicos de Comparador */
+        .mapping-area { background: #f4f6f7; border: 1px solid #bdc3c7; border-radius: 8px; padding: 20px; margin-bottom: 20px; display: none; }
+        .mapping-row { display: flex; align-items: center; gap: 15px; margin-bottom: 10px; }
+        .mapping-select { flex: 1; padding: 10px; border-radius: 4px; border: 1px solid #95a5a6; font-size: 14px; }
+        .mapping-separator { font-weight: bold; color: #34495e; }
+        .btn-add-map { background: #3498db; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold; }
+        .btn-add-map:hover { background: #2980b9; }
+        .btn-remove-map { background: #e74c3c; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn-remove-map:hover { background: #c0392b; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    
     <div class="header-container">
         <h1>Auditor Integral de Archivos</h1>
         <img src="logo.png" alt="Logo" class="header-logo" onerror="this.style.display='none'"> 
     </div>
-    
-    <div class="upload-grid">
-        <div class="upload-box required" id="boxClient">
-            <label for="clientFile" class="upload-label">
-                <h3>1. Archivo Origen(Requerido)</h3>
-                <p>Datos a importar.</p>
-                <span class="file-name" id="nameClient">Ningún archivo seleccionado</span>
-            </label>
-            <input type="file" id="clientFile" accept=".xlsx, .xls, .csv, .txt">
-            <select id="clientSheetSelector" class="sheet-selector"></select>
-        </div>
-        
-        <div class="upload-box" id="boxTemplate">
-            <label for="templateFile" class="upload-label">
-                <h3>2. Plantilla (Opcional)</h3>
-                <p>Para comparar columnas.</p>
-                <span class="file-name" id="nameTemplate">Ningún archivo seleccionado</span>
-            </label>
-            <input type="file" id="templateFile" accept=".xlsx, .xls, .csv, .txt">
-        </div>
-        
-        <div class="upload-box disabled-box" id="boxErrors">
-            <label for="errorsFile" class="upload-label" style="cursor: not-allowed;">
-                <span class="construction-badge">🚧 En construcción 🚧</span>
-                <h3>3. Fallas </h3>
-                <p>Reporte de errores devuelto.</p>
-                <span class="file-name" id="nameErrors" style="color: #95a5a6;">Módulo inhabilitado</span>
-            </label>
-            <input type="file" id="errorsFile" accept=".xlsx, .xls, .csv, .txt" disabled>
-        </div>
+
+    <div class="tabs-nav">
+        <button class="tab-btn active" onclick="switchTab('tab-auditor')">🔍 Auditor de Calidad</button>
+        <button class="tab-btn" onclick="switchTab('tab-comparador')">⚖️ Conciliador / Cruce de Datos</button>
     </div>
 
-    <div class="config-panel">
-        <h3>⚙️ Opciones de Auditoría</h3>
-        <div class="config-grid">
-            <label class="config-item" title="Verifica espacios invisibles, comillas sin cerrar y filas vacías">
-                <input type="checkbox" id="chkEstructura" checked> Espacios, comillas y filas vacías
-            </label>
-            <label class="config-item" title="Escanea el Excel buscando cálculos o macros ocultas">
-                <input type="checkbox" id="chkFormulas" checked> Buscar Fórmulas (Solo Excel)
-            </label>
-            <label class="config-item" title="Revisa si el libro de Excel tiene pestañas escondidas">
-                <input type="checkbox" id="chkHojasOcultas" checked> Detectar Hojas Ocultas (Excel)
-            </label>
-            <label class="config-item danger" title="Analiza el 100% de las filas para deducir tipos de datos. Puede ser lento en archivos pesados.">
-                <input type="checkbox" id="chkExhaustivo"> Análisis Exhaustivo (Sin Límite)
-            </label>
+    <div id="tab-auditor" class="tab-content active">
+        <div class="upload-grid">
+            <div class="upload-box required" id="boxClient">
+                <label for="clientFile" class="upload-label">
+                    <h3>1. Archivo del Cliente (Requerido)</h3>
+                    <p>Datos a importar.</p>
+                    <span class="file-name" id="nameClient">Ningún archivo seleccionado</span>
+                </label>
+                <input type="file" id="clientFile" accept=".xlsx, .xls, .csv, .txt">
+                <select id="clientSheetSelector" class="sheet-selector"></select>
+            </div>
             
-            <div style="grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; margin-top: 5px; border-top: 1px dashed #ddd; padding-top: 15px; flex-wrap: wrap;">
-                
-                <label class="config-item">
-                    <input type="checkbox" id="chkFechas" checked> 📅 Analizar Fechas en:
+            <div class="upload-box" id="boxTemplate">
+                <label for="templateFile" class="upload-label">
+                    <h3>2. Plantilla Intiza (Opcional)</h3>
+                    <p>Para comparar columnas.</p>
+                    <span class="file-name" id="nameTemplate">Ningún archivo seleccionado</span>
                 </label>
-                <select id="selFechasModo" class="sheet-selector" style="display: inline-block; width: auto; margin-top: 0; padding: 5px;">
-                    <option value="ALL">Todas las columnas</option>
-                    <option value="CUSTOM">Múltiples letras (Ej: A, C)</option>
-                </select>
-                <input type="text" id="txtFechasCols" placeholder="Ej: A, C, AA" style="display: none; padding: 5px; border-radius: 4px; border: 1px solid #3498db; width: 100px; font-weight: bold; color: #2c3e50;">
-                
-                <span style="width: 20px;"></span><label class="config-item">
-                    <input type="checkbox" id="chkDuplicates"> 🔍 Duplicados en:
+                <input type="file" id="templateFile" accept=".xlsx, .xls, .csv, .txt">
+            </div>
+            
+            <div class="upload-box disabled-box" id="boxErrors">
+                <label for="errorsFile" class="upload-label" style="cursor: not-allowed;">
+                    <span class="construction-badge">🚧 En construcción 🚧</span>
+                    <h3>3. Fallas Intiza</h3>
+                    <p>Reporte de errores devuelto.</p>
+                    <span class="file-name" id="nameErrors" style="color: #95a5a6;">Módulo inhabilitado</span>
                 </label>
-                <select id="colDuplicateSelector" class="sheet-selector" style="display: none; margin-top: 0; width: auto; padding: 5px;"></select>
-                <input type="text" id="txtDupCols" placeholder="Ej: A, B" title="Columnas a concatenar" style="display: none; padding: 5px; border-radius: 4px; border: 1px solid #3498db; width: 100px; font-weight: bold; color: #2c3e50;">
-                <span id="dupWarning" style="display:none; color:#e74c3c; font-size:12px; font-weight:bold;">¡Sube un archivo primero!</span>
+                <input type="file" id="errorsFile" accept=".xlsx, .xls, .csv, .txt" disabled>
             </div>
         </div>
+
+        <div class="config-panel">
+            <h3>⚙️ Opciones de Auditoría</h3>
+            <div class="config-grid">
+                <label class="config-item" title="Verifica espacios invisibles, comillas sin cerrar y filas vacías"><input type="checkbox" id="chkEstructura" checked> Espacios, comillas y filas vacías</label>
+                <label class="config-item" title="Escanea el Excel buscando cálculos o macros ocultas"><input type="checkbox" id="chkFormulas" checked> Buscar Fórmulas (Solo Excel)</label>
+                <label class="config-item" title="Revisa si el libro de Excel tiene pestañas escondidas"><input type="checkbox" id="chkHojasOcultas" checked> Detectar Hojas Ocultas (Excel)</label>
+                <label class="config-item danger" title="Analiza el 100% de las filas para deducir tipos de datos. Puede ser lento en archivos pesados."><input type="checkbox" id="chkExhaustivo"> Análisis Exhaustivo (Sin Límite)</label>
+                
+                <div style="grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; margin-top: 5px; border-top: 1px dashed #ddd; padding-top: 15px; flex-wrap: wrap;">
+                    <label class="config-item"><input type="checkbox" id="chkFechas" checked> 📅 Analizar Fechas en:</label>
+                    <select id="selFechasModo" class="sheet-selector" style="display: inline-block; width: auto; margin-top: 0; padding: 5px;">
+                        <option value="ALL">Todas las columnas</option>
+                        <option value="CUSTOM">Múltiples letras (Ej: A, C)</option>
+                    </select>
+                    <input type="text" id="txtFechasCols" placeholder="Ej: A, C, AA" style="display: none; padding: 5px; border-radius: 4px; border: 1px solid #3498db; width: 100px; font-weight: bold; color: #2c3e50;">
+                    
+                    <span style="width: 20px;"></span>
+                    
+                    <label class="config-item"><input type="checkbox" id="chkDuplicates"> 🔍 Duplicados en:</label>
+                    <select id="colDuplicateSelector" class="sheet-selector" style="display: none; margin-top: 0; width: auto; padding: 5px;"></select>
+                    <input type="text" id="txtDupCols" placeholder="Ej: A, B" title="Columnas a concatenar" style="display: none; padding: 5px; border-radius: 4px; border: 1px solid #3498db; width: 100px; font-weight: bold; color: #2c3e50;">
+                    <span id="dupWarning" style="display:none; color:#e74c3c; font-size:12px; font-weight:bold;">¡Sube un archivo primero!</span>
+                </div>
+            </div>
+        </div>
+
+        <button id="btnProcessAuditor" class="btn-process" disabled>Ejecutar Auditoría</button>
+        <div id="dashboardContainer"></div>
+        <div id="results"></div>
     </div>
 
-    <button id="btnProcess" class="btn-process" disabled>Analizar Archivos</button>
+    <div id="tab-comparador" class="tab-content">
+        <div class="upload-grid" style="grid-template-columns: 1fr 1fr;">
+            <div class="upload-box required">
+                <label for="compFileA" class="upload-label">
+                    <h3>Archivo Base (Sistema A)</h3>
+                    <p>Ej: Exportación ERP Cliente</p>
+                    <span class="file-name" id="nameCompA">Ningún archivo seleccionado</span>
+                </label>
+                <input type="file" id="compFileA" accept=".xlsx, .xls, .csv, .txt">
+                <select id="compSheetA" class="sheet-selector"></select>
+            </div>
+            
+            <div class="upload-box required">
+                <label for="compFileB" class="upload-label">
+                    <h3>Archivo a Cruzar (Sistema B)</h3>
+                    <p>Ej: Exportación Intiza / Banco</p>
+                    <span class="file-name" id="nameCompB">Ningún archivo seleccionado</span>
+                </label>
+                <input type="file" id="compFileB" accept=".xlsx, .xls, .csv, .txt">
+                <select id="compSheetB" class="sheet-selector"></select>
+            </div>
+        </div>
 
-    <div id="dashboardContainer"></div>
-    <div id="results"></div>
-    <div id="intizaErrorsContainer"></div>
+        <div id="mappingArea" class="mapping-area">
+            <h3>🔗 Configuración de Cruce (Llaves de Conciliación)</h3>
+            <p style="font-size: 14px; margin-top: 0;">Selecciona las columnas equivalentes. Si agregas más de un criterio, el sistema requerirá que <b>todos</b> coincidan (concatenación automática).</p>
+            <div id="mappingRowsContainer"></div>
+            <button id="btnAddMapping" class="btn-add-map">+ Agregar Criterio</button>
+        </div>
+
+        <button id="btnProcessComp" class="btn-process" disabled>Conciliar Archivos</button>
+        <div id="compResults"></div>
+    </div>
 </div>
 
 <script>
-    const inputs = {
-        client: document.getElementById('clientFile'),
-        template: document.getElementById('templateFile'),
-        errors: document.getElementById('errorsFile')
-    };
-    const btnProcess = document.getElementById('btnProcess');
-    const clientSheetSelector = document.getElementById('clientSheetSelector');
-    
-    // Controles de Configuración
-    const chkEstructura = document.getElementById('chkEstructura');
-    const chkFormulas = document.getElementById('chkFormulas');
-    const chkHojasOcultas = document.getElementById('chkHojasOcultas');
-    const chkExhaustivo = document.getElementById('chkExhaustivo');
-    
-    const chkFechas = document.getElementById('chkFechas');
-    const selFechasModo = document.getElementById('selFechasModo');
-    const txtFechasCols = document.getElementById('txtFechasCols');
+    // ==========================================
+    // LÓGICA DE SOLAPAS (TABS)
+    // ==========================================
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        document.querySelector(`[onclick="switchTab('${tabId}')"]`).classList.add('active');
+    }
 
-    const chkDuplicates = document.getElementById('chkDuplicates');
-    const colDuplicateSelector = document.getElementById('colDuplicateSelector');
-    const txtDupCols = document.getElementById('txtDupCols');
-
+    // ==========================================
+    // UTILIDADES COMUNES
+    // ==========================================
     function getColumnLetter(colIndex) {
         let letter = '';
         let temp = colIndex;
@@ -182,14 +216,363 @@
         return letter;
     }
 
-    function populateSelectors(headers) {
-        // Limpiamos los selectores dinámicos
+    function parseTargetCols(str) {
+        if (!str) return [];
+        return str.toUpperCase().split(',').map(s => s.trim()).filter(s => s).map(s => {
+            let col = 0;
+            let cleanStr = s.replace(/[^A-Z]/g, '');
+            if (!cleanStr) return -1;
+            for(let i = 0; i < cleanStr.length; i++) {
+                col = col * 26 + (cleanStr.charCodeAt(i) - 64);
+            }
+            return col - 1;
+        }).filter(c => c >= 0);
+    }
+
+    // Motor de Parseo Universal (Reutilizado por Auditor y Comparador)
+    function readAndParseFile(file, targetSheetName = null, config) {
+        return new Promise((resolve, reject) => {
+            if (!file) return resolve(null);
+            const ext = file.name.split('.').pop().toLowerCase();
+            const info = { type: ext.toUpperCase(), name: file.name, encoding: 'N/A', esTexto: false, hojasOcultas: 0, config: config };
+            const isExcel = ext === 'xlsx' || ext === 'xls';
+
+            if (isExcel) {
+                info.encoding = 'Nativo Excel';
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const readConfig = { type: 'array', cellDates: true, cellFormula: config ? config.formulas : false };
+                        const workbook = XLSX.read(data, readConfig);
+                        
+                        if (config && config.hojasOcultas) {
+                            let ocultas = 0;
+                            if (workbook.Workbook && workbook.Workbook.Sheets) {
+                                workbook.Workbook.Sheets.forEach(sheet => {
+                                    if (sheet.Hidden === 1 || sheet.Hidden === 2 || sheet.state === 'hidden' || sheet.state === 'veryHidden') ocultas++;
+                                });
+                            }
+                            info.hojasOcultas = ocultas;
+                        }
+
+                        const sheetName = targetSheetName && workbook.SheetNames.includes(targetSheetName) ? targetSheetName : workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[sheetName];
+                        const json = XLSX.utils.sheet_to_json(worksheet, {header: 1, blankrows: config ? config.estructura : false}); 
+                        resolve({ data: json, info: info, preIssues: [], rawSheet: worksheet, sheetName: sheetName, allSheets: workbook.SheetNames });
+                    } catch (err) { reject(new Error(`Error Excel (${file.name}): ` + err.message)); }
+                };
+                reader.onerror = () => reject(new Error("Fallo al leer Excel."));
+                reader.readAsArrayBuffer(file);
+            } else {
+                info.esTexto = true;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const buffer = e.target.result;
+                        const uint8 = new Uint8Array(buffer).slice(0, 102400); 
+                        let binStr = "";
+                        for(let i=0; i<uint8.length; i++) binStr += String.fromCharCode(uint8[i]);
+                        const detected = jschardet.detect(binStr);
+                        info.encoding = detected.encoding ? detected.encoding.toUpperCase() : 'UTF-8';
+                        
+                        let preIssues = [];
+                        if (!info.encoding.includes('UTF-8') && !info.encoding.includes('ASCII')) {
+                             preIssues.push({ type: 'info', msg: `<b>Codificación detectada: ${info.encoding}.</b> Se recomienda guardar como UTF-8.` });
+                        }
+
+                        const textReader = new FileReader();
+                        textReader.onload = (ev) => {
+                            const content = ev.target.result;
+                            if (config && config.estructura) {
+                                content.split(/\r?\n/).forEach((line, index) => {
+                                    if ((line.match(/"/g) || []).length % 2 !== 0) {
+                                        preIssues.push({ type: 'error', msg: `<b>Fila ${index + 1}:</b> Comillas dobles sin cerrar. Rompe la estructura.` });
+                                    }
+                                });
+                            }
+                            Papa.parse(content, {
+                                skipEmptyLines: config ? !config.estructura : true,
+                                complete: (res) => resolve({ data: res.data, info: info, preIssues: preIssues, rawSheet: null, sheetName: 'CSV/TXT', allSheets: [] }),
+                                error: (err) => reject(new Error("Error CSV: " + err.message))
+                            });
+                        };
+                        textReader.onerror = () => reject(new Error("Fallo texto."));
+                        textReader.readAsText(file, info.encoding);
+                    } catch (err) { reject(new Error(`Error texto (${file.name}): ` + err.message)); }
+                };
+                reader.onerror = () => reject(new Error("Fallo bytes."));
+                reader.readAsArrayBuffer(file);
+            }
+        });
+    }
+
+    // ==========================================
+    // LÓGICA MÓDULO: COMPARADOR / CONCILIADOR
+    // ==========================================
+    const inCompA = document.getElementById('compFileA');
+    const inCompB = document.getElementById('compFileB');
+    const selCompA = document.getElementById('compSheetA');
+    const selCompB = document.getElementById('compSheetB');
+    const btnProcessComp = document.getElementById('btnProcessComp');
+    const mappingArea = document.getElementById('mappingArea');
+    const mappingRowsContainer = document.getElementById('mappingRowsContainer');
+    const btnAddMapping = document.getElementById('btnAddMapping');
+
+    let headersA = [];
+    let headersB = [];
+
+    // Lector rápido para Comparador para extraer encabezados
+    async function handleCompFileChange(fileInput, nameSpanId, sheetSelect, isA) {
+        const file = fileInput.files[0];
+        document.getElementById(nameSpanId).textContent = file ? file.name : 'Ningún archivo seleccionado';
+        sheetSelect.style.display = 'none';
+        sheetSelect.innerHTML = '';
+        
+        if (!file) {
+            checkCompReady();
+            return;
+        }
+
+        const dummyConfig = { estructura: false, formulas: false, hojasOcultas: false, fechas: false };
+        try {
+            const result = await readAndParseFile(file, null, dummyConfig);
+            if (result.allSheets && result.allSheets.length > 1) {
+                result.allSheets.forEach(s => {
+                    const opt = document.createElement('option');
+                    opt.value = s; opt.textContent = `Hoja: "${s}"`;
+                    sheetSelect.appendChild(opt);
+                });
+                sheetSelect.style.display = 'block';
+            }
+            
+            // Función para recargar encabezados si cambia de hoja
+            sheetSelect.onchange = async () => {
+                const newRes = await readAndParseFile(file, sheetSelect.value, dummyConfig);
+                if(isA) headersA = newRes.data[0] || []; else headersB = newRes.data[0] || [];
+                rebuildMappingOptions();
+            };
+
+            if(isA) headersA = result.data[0] || []; else headersB = result.data[0] || [];
+            checkCompReady();
+        } catch(e) {
+            console.error("Error pre-lectura comparador", e);
+        }
+    }
+
+    inCompA.addEventListener('change', () => handleCompFileChange(inCompA, 'nameCompA', selCompA, true));
+    inCompB.addEventListener('change', () => handleCompFileChange(inCompB, 'nameCompB', selCompB, false));
+    selCompA.addEventListener('click', (e) => e.stopPropagation());
+    selCompB.addEventListener('click', (e) => e.stopPropagation());
+
+    function checkCompReady() {
+        if (inCompA.files.length > 0 && inCompB.files.length > 0) {
+            mappingArea.style.display = 'block';
+            if (mappingRowsContainer.children.length === 0) createMappingRow(); // Crea la primera por defecto
+            else rebuildMappingOptions();
+            btnProcessComp.disabled = false;
+        } else {
+            mappingArea.style.display = 'none';
+            btnProcessComp.disabled = true;
+        }
+    }
+
+    function createMappingRow() {
+        const row = document.createElement('div');
+        row.className = 'mapping-row';
+        
+        const selA = document.createElement('select');
+        selA.className = 'mapping-select comp-sel-a';
+        
+        const sep = document.createElement('span');
+        sep.className = 'mapping-separator';
+        sep.textContent = ' ⟷ ';
+        
+        const selB = document.createElement('select');
+        selB.className = 'mapping-select comp-sel-b';
+        
+        const btnDel = document.createElement('button');
+        btnDel.className = 'btn-remove-map';
+        btnDel.textContent = 'X';
+        btnDel.onclick = () => {
+            if (mappingRowsContainer.children.length > 1) row.remove();
+            else alert("Debe haber al menos un criterio de cruce.");
+        };
+
+        row.appendChild(selA);
+        row.appendChild(sep);
+        row.appendChild(selB);
+        row.appendChild(btnDel);
+        mappingRowsContainer.appendChild(row);
+        
+        fillSelect(selA, headersA);
+        fillSelect(selB, headersB);
+    }
+
+    btnAddMapping.addEventListener('click', createMappingRow);
+
+    function fillSelect(selectElem, headersArr) {
+        const currentVal = selectElem.value;
+        selectElem.innerHTML = '';
+        headersArr.forEach((h, idx) => {
+            const opt = document.createElement('option');
+            opt.value = idx;
+            opt.textContent = `${getColumnLetter(idx)}: ${h || 'Sin nombre'}`;
+            selectElem.appendChild(opt);
+        });
+        if (currentVal && selectElem.querySelector(`option[value="${currentVal}"]`)) {
+            selectElem.value = currentVal;
+        }
+    }
+
+    function rebuildMappingOptions() {
+        document.querySelectorAll('.comp-sel-a').forEach(sel => fillSelect(sel, headersA));
+        document.querySelectorAll('.comp-sel-b').forEach(sel => fillSelect(sel, headersB));
+    }
+
+    btnProcessComp.addEventListener('click', async () => {
+        const resultsDiv = document.getElementById('compResults');
+        resultsDiv.innerHTML = '<p>Cruzando bases de datos... esto puede demorar unos segundos en archivos gigantes.</p>';
+        btnProcessComp.disabled = true;
+
+        const dummyConfig = { estructura: false, formulas: false, hojasOcultas: false, fechas: false };
+        
+        try {
+            const sheetA = selCompA.style.display === 'block' ? selCompA.value : null;
+            const sheetB = selCompB.style.display === 'block' ? selCompB.value : null;
+
+            const [resA, resB] = await Promise.all([
+                readAndParseFile(inCompA.files[0], sheetA, dummyConfig),
+                readAndParseFile(inCompB.files[0], sheetB, dummyConfig)
+            ]);
+
+            if (!resA || !resB) throw new Error("Fallo al leer uno de los archivos.");
+
+            // Recolectar llaves mapeadas
+            const mapA = Array.from(document.querySelectorAll('.comp-sel-a')).map(s => parseInt(s.value));
+            const mapB = Array.from(document.querySelectorAll('.comp-sel-b')).map(s => parseInt(s.value));
+
+            // Procesar Sets
+            const dataA = resA.data.slice(1).filter(r => r && r.length > 0 && r.some(c => c !== null && c !== undefined && c !== '')); // Quitar header y vacías
+            const dataB = resB.data.slice(1).filter(r => r && r.length > 0 && r.some(c => c !== null && c !== undefined && c !== ''));
+
+            function buildKey(row, indices) {
+                return indices.map(idx => {
+                    let v = row[idx];
+                    if (v instanceof Date) v = v.toISOString(); // Estandarizar fechas nativas
+                    return String(v === undefined || v === null ? '' : v).trim().toLowerCase();
+                }).join('|||');
+            }
+
+            const dictA = new Map();
+            dataA.forEach(row => {
+                const k = buildKey(row, mapA);
+                if (k.replace(/\|\|\|/g, '') !== '') dictA.set(k, row); // Ignorar si toda la llave está vacía
+            });
+
+            const dictB = new Map();
+            dataB.forEach(row => {
+                const k = buildKey(row, mapB);
+                if (k.replace(/\|\|\|/g, '') !== '') dictB.set(k, row);
+            });
+
+            let matchCount = 0;
+            let missingInB = [];
+            let missingInA = [];
+
+            // Buscar en A lo que falta en B
+            for (const [key, row] of dictA.entries()) {
+                if (dictB.has(key)) matchCount++;
+                else missingInB.push(row);
+            }
+
+            // Buscar en B lo que falta en A
+            for (const [key, row] of dictB.entries()) {
+                if (!dictA.has(key)) missingInA.push(row);
+            }
+
+            // Renderizar Dashboard Conciliador
+            let html = `
+                <div class="dashboard" style="margin-top: 20px;">
+                    <div class="dash-card" style="border-top: 4px solid #3498db;">Total Reg. A <span>${dictA.size}</span></div>
+                    <div class="dash-card" style="border-top: 4px solid #3498db;">Total Reg. B <span>${dictB.size}</span></div>
+                    <div class="dash-card" style="border-top: 4px solid #27ae60;">Cruzan Perfecto <span>${matchCount}</span></div>
+                    <div class="dash-card" style="border-top: 4px solid #e74c3c;">Faltan en B <span>${missingInB.length}</span></div>
+                    <div class="dash-card" style="border-top: 4px solid #f39c12;">Faltan en A <span>${missingInA.length}</span></div>
+                </div>
+            `;
+
+            // Función para renderizar tablas de muestra
+            const renderTable = (title, missingRows, mapIndices, headersSource, bgColor) => {
+                if (missingRows.length === 0) return '';
+                let t = `<h3 style="margin-top: 30px; border-left: 5px solid ${bgColor}; padding-left: 10px;">${title} (${missingRows.length})</h3>`;
+                t += `<p style="font-size:13px; color:#7f8c8d;">Mostrando hasta 50 ejemplos de llaves que no cruzaron:</p>`;
+                t += `<div style="overflow-x: auto;"><table class="error-table"><thead><tr>`;
+                
+                // Solo mostramos las columnas que se usaron para cruzar para que sea fácil de identificar
+                mapIndices.forEach(idx => {
+                    t += `<th style="background-color:${bgColor};">${headersSource[idx] || 'Col ' + getColumnLetter(idx)}</th>`;
+                });
+                t += `</tr></thead><tbody>`;
+                
+                const limit = Math.min(missingRows.length, 50);
+                for (let i = 0; i < limit; i++) {
+                    t += `<tr>`;
+                    mapIndices.forEach(idx => {
+                        let val = missingRows[i][idx];
+                        if (val instanceof Date) val = val.toLocaleDateString();
+                        t += `<td>${val !== undefined && val !== null ? val : ''}</td>`;
+                    });
+                    t += `</tr>`;
+                }
+                t += `</tbody></table></div>`;
+                return t;
+            };
+
+            if (matchCount === dictA.size && matchCount === dictB.size) {
+                 html += `<div class="success">✅ ¡Conciliación Perfecta! Ambos archivos contienen exactamente la misma información bajo las llaves seleccionadas.</div>`;
+            } else {
+                 html += renderTable(`🚨 Registros en [Archivo A] que NO están en [Archivo B]`, missingInB, mapA, headersA, '#e74c3c');
+                 html += renderTable(`⚠️ Registros en [Archivo B] que NO están en [Archivo A]`, missingInA, mapB, headersB, '#f39c12');
+            }
+
+            resultsDiv.innerHTML = html;
+
+        } catch (error) {
+            resultsDiv.innerHTML = `<div class="issue-card"><b>Error:</b> ${error.message}</div>`;
+        } finally {
+            btnProcessComp.disabled = false;
+        }
+    });
+
+    // ==========================================
+    // LÓGICA MÓDULO: AUDITOR (V4.21 MANTENIDA INTACTA)
+    // ==========================================
+    const inputsAuditor = {
+        client: document.getElementById('clientFile'),
+        template: document.getElementById('templateFile'),
+        errors: document.getElementById('errorsFile')
+    };
+    const btnProcessAuditor = document.getElementById('btnProcessAuditor');
+    const audClientSheetSel = document.getElementById('clientSheetSelector');
+    
+    const chkEstructura = document.getElementById('chkEstructura');
+    const chkFormulas = document.getElementById('chkFormulas');
+    const chkHojasOcultas = document.getElementById('chkHojasOcultas');
+    const chkExhaustivo = document.getElementById('chkExhaustivo');
+    const chkFechas = document.getElementById('chkFechas');
+    const selFechasModo = document.getElementById('selFechasModo');
+    const txtFechasCols = document.getElementById('txtFechasCols');
+    const chkDuplicates = document.getElementById('chkDuplicates');
+    const colDuplicateSelector = document.getElementById('colDuplicateSelector');
+    const txtDupCols = document.getElementById('txtDupCols');
+
+    function populateAuditorSelectors(headers) {
         colDuplicateSelector.innerHTML = '';
         Array.from(selFechasModo.options).forEach(opt => {
             if (opt.value !== 'ALL' && opt.value !== 'CUSTOM') opt.remove();
         });
 
-        // Opción CUSTOM para Duplicados al principio
         const optCustomDup = document.createElement('option');
         optCustomDup.value = 'CUSTOM';
         optCustomDup.textContent = 'Múltiples (Concatenar letras)';
@@ -210,14 +593,12 @@
             selFechasModo.appendChild(optF);
         });
 
-        // Setear Duplicados en la primera columna real (no custom) por defecto
         if (colDuplicateSelector.options.length > 1) {
             colDuplicateSelector.selectedIndex = 1;
             txtDupCols.style.display = 'none';
         }
     }
 
-    // Eventos Fechas
     chkFechas.addEventListener('change', (e) => {
         selFechasModo.disabled = !e.target.checked;
         txtFechasCols.disabled = !e.target.checked;
@@ -227,9 +608,8 @@
         txtFechasCols.style.display = e.target.value === 'CUSTOM' ? 'inline-block' : 'none';
     });
 
-    // Eventos Duplicados
     chkDuplicates.addEventListener('change', (e) => {
-        if (!inputs.client.files[0]) {
+        if (!inputsAuditor.client.files[0]) {
             document.getElementById('dupWarning').style.display = 'inline';
             e.target.checked = false;
             return;
@@ -247,88 +627,53 @@
         txtDupCols.style.display = e.target.value === 'CUSTOM' ? 'inline-block' : 'none';
     });
 
-    // Manejador del Archivo de Cliente
-    inputs.client.addEventListener('change', (e) => {
+    inputsAuditor.client.addEventListener('change', async (e) => {
         const file = e.target.files[0];
-        const nameSpan = document.getElementById('nameClient');
-        nameSpan.textContent = file ? file.name : 'Ningún archivo seleccionado';
-        
-        clientSheetSelector.style.display = 'none';
-        clientSheetSelector.innerHTML = '';
+        document.getElementById('nameClient').textContent = file ? file.name : 'Ningún archivo seleccionado';
+        audClientSheetSel.style.display = 'none';
+        audClientSheetSel.innerHTML = '';
         document.getElementById('dupWarning').style.display = 'none';
-        
-        const hasClientFile = inputs.client.files && inputs.client.files.length > 0;
-        btnProcess.disabled = !hasClientFile;
+        btnProcessAuditor.disabled = !file;
 
         if (file) {
-            const ext = file.name.split('.').pop().toLowerCase();
-            
-            if (ext === 'xlsx' || ext === 'xls') {
-                const reader = new FileReader();
-                reader.onload = (ev) => {
-                    try {
-                        const data = new Uint8Array(ev.target.result);
-                        const workbook = XLSX.read(data, {type: 'array'}); 
-                        
-                        if (workbook.SheetNames && workbook.SheetNames.length > 1) {
-                            workbook.SheetNames.forEach(sheetName => {
-                                const option = document.createElement('option');
-                                option.value = sheetName;
-                                option.textContent = `Analizar hoja: "${sheetName}"`;
-                                clientSheetSelector.appendChild(option);
-                            });
-                            clientSheetSelector.style.display = 'block';
-                        }
-                        
-                        window.loadHeadersForSheet = function(sheetName) {
-                            const ws = workbook.Sheets[sheetName];
-                            const json = XLSX.utils.sheet_to_json(ws, {header: 1, range: 0});
-                            populateSelectors(json[0] || []);
-                        };
-                        window.loadHeadersForSheet(workbook.SheetNames[0]);
-
-                    } catch (err) { console.error("Error pre-leyendo hojas:", err); }
-                };
-                reader.readAsArrayBuffer(file);
-            } else {
-                const textReader = new FileReader();
-                textReader.onload = (ev) => {
-                    Papa.parse(ev.target.result, {
-                        preview: 1,
-                        complete: function(results) {
-                            if (results.data && results.data.length > 0) populateSelectors(results.data[0]);
-                        }
+            try {
+                const dummyConfig = { estructura: false, formulas: false, hojasOcultas: false };
+                const result = await readAndParseFile(file, null, dummyConfig);
+                if (result.allSheets && result.allSheets.length > 1) {
+                    result.allSheets.forEach(s => {
+                        const opt = document.createElement('option');
+                        opt.value = s; opt.textContent = `Analizar hoja: "${s}"`;
+                        audClientSheetSel.appendChild(opt);
                     });
+                    audClientSheetSel.style.display = 'block';
+                }
+                
+                audClientSheetSel.onchange = async () => {
+                    const newRes = await readAndParseFile(file, audClientSheetSel.value, dummyConfig);
+                    populateAuditorSelectors(newRes.data[0] || []);
                 };
-                textReader.readAsText(file);
-            }
+
+                populateAuditorSelectors(result.data[0] || []);
+
+            } catch (err) { console.error("Error pre-leyendo auditor:", err); }
         } else {
             chkDuplicates.checked = false;
             colDuplicateSelector.style.display = 'none';
-            colDuplicateSelector.innerHTML = '';
             txtDupCols.style.display = 'none';
-            
-            Array.from(selFechasModo.options).forEach(opt => {
-                if (opt.value !== 'ALL' && opt.value !== 'CUSTOM') opt.remove();
-            });
+            Array.from(selFechasModo.options).forEach(opt => { if (opt.value !== 'ALL' && opt.value !== 'CUSTOM') opt.remove(); });
         }
     });
 
-    clientSheetSelector.addEventListener('change', (e) => {
-        if (window.loadHeadersForSheet) window.loadHeadersForSheet(e.target.value);
-    });
-
     ['template', 'errors'].forEach(key => {
-        inputs[key].addEventListener('change', (e) => {
+        inputsAuditor[key].addEventListener('change', (e) => {
             const file = e.target.files[0];
-            const nameSpan = document.getElementById('name' + key.charAt(0).toUpperCase() + key.slice(1));
-            nameSpan.textContent = file ? file.name : 'Ningún archivo seleccionado';
+            document.getElementById('name' + key.charAt(0).toUpperCase() + key.slice(1)).textContent = file ? file.name : 'Ningún archivo seleccionado';
         });
     });
 
-    // Detener clicks
-    clientSheetSelector.addEventListener('click', (e) => e.stopPropagation());
-    clientSheetSelector.addEventListener('mousedown', (e) => e.stopPropagation());
+    // Detener clicks de menús desplegables
+    audClientSheetSel.addEventListener('click', (e) => e.stopPropagation());
+    audClientSheetSel.addEventListener('mousedown', (e) => e.stopPropagation());
     colDuplicateSelector.addEventListener('click', (e) => e.stopPropagation());
     colDuplicateSelector.addEventListener('mousedown', (e) => e.stopPropagation());
     selFechasModo.addEventListener('click', (e) => e.stopPropagation());
@@ -336,27 +681,11 @@
     txtFechasCols.addEventListener('click', (e) => e.stopPropagation());
     txtDupCols.addEventListener('click', (e) => e.stopPropagation());
 
-    // Auxiliar: Transforma "A, B, AA" -> [0, 1, 26]
-    function parseTargetCols(str) {
-        if (!str) return [];
-        return str.toUpperCase().split(',').map(s => s.trim()).filter(s => s).map(s => {
-            let col = 0;
-            // Solo procesar letras A-Z
-            let cleanStr = s.replace(/[^A-Z]/g, '');
-            if (!cleanStr) return -1;
-            for(let i = 0; i < cleanStr.length; i++) {
-                col = col * 26 + (cleanStr.charCodeAt(i) - 64);
-            }
-            return col - 1;
-        }).filter(c => c >= 0);
-    }
-
-    btnProcess.addEventListener('click', async () => {
+    btnProcessAuditor.addEventListener('click', async () => {
         const resultsDiv = document.getElementById('results');
         resultsDiv.innerHTML = '<p>Ejecutando motores de auditoría seleccionados...</p>';
         document.getElementById('dashboardContainer').innerHTML = '';
-        document.getElementById('intizaErrorsContainer').innerHTML = '';
-        btnProcess.disabled = true;
+        btnProcessAuditor.disabled = true;
 
         const auditorConfig = {
             estructura: chkEstructura.checked,
@@ -374,12 +703,12 @@
         };
 
         try {
-            const selectedClientSheet = clientSheetSelector.style.display === 'block' ? clientSheetSelector.value : null;
+            const selectedClientSheet = audClientSheetSel.style.display === 'block' ? audClientSheetSel.value : null;
 
             const [clientResult, templateResult, errorsResult] = await Promise.all([
-                readAndParseFile(inputs.client.files[0], selectedClientSheet, auditorConfig),
-                readAndParseFile(inputs.template.files[0], null, auditorConfig),
-                readAndParseFile(inputs.errors.files[0], null, auditorConfig)
+                readAndParseFile(inputsAuditor.client.files[0], selectedClientSheet, auditorConfig),
+                readAndParseFile(inputsAuditor.template.files[0], null, auditorConfig),
+                readAndParseFile(inputsAuditor.errors.files[0], null, auditorConfig) // Bloqueado, retornará null
             ]);
 
             if (!clientResult) throw new Error("El archivo del cliente no pudo ser leído.");
@@ -389,112 +718,25 @@
         } catch (error) {
             resultsDiv.innerHTML = `<div class="issue-card"><b>Error crítico:</b> ${error.message}</div>`;
         } finally {
-            btnProcess.disabled = false;
+            btnProcessAuditor.disabled = false;
         }
     });
-
-    function readAndParseFile(file, targetSheetName = null, config) {
-        return new Promise((resolve, reject) => {
-            if (!file) return resolve(null);
-            
-            const ext = file.name.split('.').pop().toLowerCase();
-            const info = { type: ext.toUpperCase(), name: file.name, encoding: 'N/A', esTexto: false, hojasOcultas: 0, config: config };
-            const isExcel = ext === 'xlsx' || ext === 'xls';
-
-            if (isExcel) {
-                info.encoding = 'Nativo Excel';
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    try {
-                        const data = new Uint8Array(e.target.result);
-                        const readConfig = { type: 'array', cellDates: true, cellFormula: config.formulas };
-                        const workbook = XLSX.read(data, readConfig);
-                        
-                        if (config.hojasOcultas) {
-                            let ocultas = 0;
-                            if (workbook.Workbook && workbook.Workbook.Sheets) {
-                                workbook.Workbook.Sheets.forEach(sheet => {
-                                    if (sheet.Hidden === 1 || sheet.Hidden === 2 || sheet.state === 'hidden' || sheet.state === 'veryHidden') ocultas++;
-                                });
-                            }
-                            info.hojasOcultas = ocultas;
-                        }
-
-                        const sheetName = targetSheetName && workbook.SheetNames.includes(targetSheetName) ? targetSheetName : workbook.SheetNames[0];
-                        const worksheet = workbook.Sheets[sheetName];
-                        const json = XLSX.utils.sheet_to_json(worksheet, {header: 1, blankrows: config.estructura}); 
-                        
-                        resolve({ data: json, info: info, preIssues: [], rawSheet: worksheet, sheetName: sheetName });
-                    } catch (err) { reject(new Error(`Error Excel (${file.name}): ` + err.message)); }
-                };
-                reader.onerror = () => reject(new Error("Fallo al leer Excel."));
-                reader.readAsArrayBuffer(file);
-            } else {
-                info.esTexto = true;
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    try {
-                        const buffer = e.target.result;
-                        const uint8 = new Uint8Array(buffer).slice(0, 102400); 
-                        let binStr = "";
-                        for(let i=0; i<uint8.length; i++) binStr += String.fromCharCode(uint8[i]);
-                        
-                        const detected = jschardet.detect(binStr);
-                        info.encoding = detected.encoding ? detected.encoding.toUpperCase() : 'UTF-8';
-                        
-                        let preIssues = [];
-                        if (!info.encoding.includes('UTF-8') && !info.encoding.includes('ASCII')) {
-                             preIssues.push({ type: 'info', msg: `<b>Codificación detectada: ${info.encoding}.</b> Se recomienda guardar como UTF-8.` });
-                        }
-
-                        const textReader = new FileReader();
-                        textReader.onload = (ev) => {
-                            const content = ev.target.result;
-                            
-                            if (config.estructura) {
-                                content.split(/\r?\n/).forEach((line, index) => {
-                                    if ((line.match(/"/g) || []).length % 2 !== 0) {
-                                        preIssues.push({ type: 'error', msg: `<b>Fila ${index + 1}:</b> Comillas dobles sin cerrar (impares). Rompe la estructura.` });
-                                    }
-                                });
-                            }
-
-                            Papa.parse(content, {
-                                skipEmptyLines: !config.estructura,
-                                complete: (res) => resolve({ data: res.data, info: info, preIssues: preIssues, rawSheet: null, sheetName: 'CSV/TXT' }),
-                                error: (err) => reject(new Error("Error CSV: " + err.message))
-                            });
-                        };
-                        textReader.onerror = () => reject(new Error("Fallo texto."));
-                        textReader.readAsText(file, info.encoding);
-                    } catch (err) { reject(new Error(`Error texto (${file.name}): ` + err.message)); }
-                };
-                reader.onerror = () => reject(new Error("Fallo bytes."));
-                reader.readAsArrayBuffer(file);
-            }
-        });
-    }
 
     function inferirTipoColumna(data, colIndex, config) {
         let counts = { 'Fecha': 0, 'Número/Moneda': 0, 'Texto': 0 };
         let validRows = 0;
-        
         const regexDate = /^(\d{1,4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,4})(?:\s|$|T)/; 
         const regexCompactDate = /^(19|20)\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])$/;
         const regexAlphaMonth = /^(\d{1,2})[\/\-\.\s]([a-zA-Z]{3,9})[\/\-\.\s](\d{4}|\d{2})(?:\s|$|T)/;
         const regexNumeric = /^[\$€£]?\s*-?[\d\.,]+$/;
 
         const limit = config.exhaustivo ? data.length : Math.min(data.length, 51); 
-        
         for (let r = 1; r < limit; r++) {
             if (!data[r]) continue;
             let cell = data[r][colIndex];
             if (cell === null || cell === undefined || cell === '') continue;
-            
             validRows++;
-            
             if (cell instanceof Date) { counts['Fecha']++; continue; }
-            
             let str = String(cell).trim();
             if (!str) continue;
 
@@ -506,14 +748,11 @@
                 counts['Texto']++;
             }
         }
-        
         if (validRows === 0) return 'Vacío';
-        
         let dominante = 'Texto';
         let max = counts['Texto'];
         if (counts['Número/Moneda'] > max) { dominante = 'Número/Moneda'; max = counts['Número/Moneda']; }
         if (counts['Fecha'] > max) { dominante = 'Fecha'; max = counts['Fecha']; }
-        
         return dominante;
     }
 
@@ -522,11 +761,9 @@
         
         validarDatosLimpios(filesData.client.data, issues, filesData.client.info, config);
 
-        // Lógica Avanzada de Duplicados (Individual o Concatenada)
         if (config.duplicados.check && filesData.client.data && filesData.client.data.length > 0) {
             const data = filesData.client.data;
             const headers = data[0] || [];
-            
             let targetCols = [];
             let colNameLabel = "";
 
@@ -550,31 +787,23 @@
                     
                     let compositeParts = [];
                     let hasAnyValue = false;
-
                     for (let c of targetCols) {
                         let val = row[c];
                         if (val !== undefined && val !== null && val !== '') {
                             hasAnyValue = true;
                             compositeParts.push(String(val).trim());
                         } else {
-                            compositeParts.push(""); // Mantener espacio si está vacío en la concatenación
+                            compositeParts.push(""); 
                         }
                     }
-                    
                     if (!hasAnyValue) continue;
-
                     const compositeKey = compositeParts.join(" | ");
                     
-                    if (seen.has(compositeKey)) {
-                        duplicates.add(compositeKey);
-                        duplicateRowsCount++;
-                    } else {
-                        seen.add(compositeKey);
-                    }
+                    if (seen.has(compositeKey)) { duplicates.add(compositeKey); duplicateRowsCount++; } 
+                    else { seen.add(compositeKey); }
                 }
                 
                 filesData.client.info.duplicados = { count: duplicateRowsCount, colName: colNameLabel };
-                
                 if (duplicateRowsCount > 0) {
                     issues.push({ type: 'error', msg: `🚨 <b>¡ALERTA DUPLICADOS!</b> Se encontraron <b>${duplicateRowsCount}</b> repeticiones en <b>${colNameLabel}</b>.<br>➤ Ejemplos: <br><i>${Array.from(duplicates).slice(0, 7).join('<br>')}</i>`});
                 } else {
@@ -668,7 +897,7 @@
         }
         
         filesData.client.info.mapeo = infoMapeo;
-        renderizarResultadosCliente(issues, filesData.client.info, filesData.client.sheetName);
+        renderizarResultadosAuditor(issues, filesData.client.info, filesData.client.sheetName);
     }
 
     function validarDatosLimpios(data, issues, info, config) {
@@ -680,16 +909,12 @@
 
         const formatosPorColumna = {}; 
         let filasVacias = 0;
-        
         const headers = data[0] || [];
         
         let targetDateCols = null; 
         if (config.fechas) {
-            if (config.fechasModo === 'CUSTOM') {
-                targetDateCols = parseTargetCols(config.fechasColsTxt);
-            } else if (config.fechasModo !== 'ALL') {
-                targetDateCols = [parseInt(config.fechasModo)];
-            }
+            if (config.fechasModo === 'CUSTOM') targetDateCols = parseTargetCols(config.fechasColsTxt);
+            else if (config.fechasModo !== 'ALL') targetDateCols = [parseInt(config.fechasModo)];
         }
 
         data.forEach((row, rowIndex) => {
@@ -705,10 +930,7 @@
                 if (cell === null || cell === undefined || cell === '') return;
                 
                 const checkDateThisCol = config.fechas && (targetDateCols === null || targetDateCols.includes(colIndex));
-                
-                if (checkDateThisCol && !formatosPorColumna[colIndex]) {
-                    formatosPorColumna[colIndex] = {};
-                }
+                if (checkDateThisCol && !formatosPorColumna[colIndex]) formatosPorColumna[colIndex] = {};
                 
                 let formato = null;
 
@@ -787,7 +1009,7 @@
         }
     }
 
-    function renderizarResultadosCliente(issues, info, sheetName) {
+    function renderizarResultadosAuditor(issues, info, sheetName) {
         const resultsDiv = document.getElementById('results');
         const dashDiv = document.getElementById('dashboardContainer');
         const cfg = info.config;
@@ -796,7 +1018,6 @@
         issues.forEach(i => counts[i.type]++);
 
         let tarjetasHTML = '';
-        
         tarjetasHTML += `<div class="dash-card" style="border-top: 4px solid #16a085;">Archivo <span>${info.type}</span></div>`;
         tarjetasHTML += `<div class="dash-card" style="border-top: 4px solid #8e44ad;">Hoja <span>${sheetName}</span></div>`;
         
